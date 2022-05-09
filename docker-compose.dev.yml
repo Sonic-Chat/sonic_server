@@ -1,0 +1,40 @@
+version: '3.7'
+services:
+  sonic_server:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    container_name: sonic_server
+    env_file:
+      - server.dev.env
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./:/server
+      - /server/node_modules
+    networks:
+      - sonic_net
+    depends_on:
+      - sonic_postgres
+
+  sonic_postgres:
+    image: postgres
+    container_name: sonic_postgres
+    restart: always
+    ports:
+      - '127.0.0.1:8888:5432'
+      - '5432:5432'
+    env_file:
+      - postgres.env
+    volumes:
+      - sonic_postgres:/var/lib/postgresql/data
+    networks:
+      - sonic_net
+
+networks:
+  sonic_net:
+    name: sonic_net
+
+volumes:
+  sonic_postgres:
+    driver: local
