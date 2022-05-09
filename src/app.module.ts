@@ -1,7 +1,9 @@
 import { Dummy } from './models/dummy.model';
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { FirebaseModule } from './modules/firebase/firebase.module';
+
+const logger = new Logger('MikroORM');
 
 @Module({
   imports: [
@@ -14,6 +16,9 @@ import { FirebaseModule } from './modules/firebase/firebase.module';
       password: process.env.DATABASE_PASSWORD,
       type: 'postgresql',
       entities: [Dummy],
+      debug: true,
+      logger: logger.log.bind(logger),
+      autoLoadEntities: true,
     }),
     FirebaseModule,
   ],
