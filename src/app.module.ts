@@ -1,6 +1,7 @@
 import { Dummy } from './models/dummy.model';
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { FirebaseModule } from './modules/firebase/firebase.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
       type: 'postgresql',
       entities: [Dummy],
     }),
+    FirebaseModule,
   ],
 })
 export class AppModule {}
