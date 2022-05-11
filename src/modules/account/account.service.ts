@@ -13,4 +13,10 @@ export class AccountService {
       where: accountWhereUniqueInput,
     });
   }
+
+  public async createUser(
+    newUser: Prisma.AccountCreateInput,
+  ): Promise<Account> {
+    return await this.prismaService.account.create({ data: newUser });
+  }
 }
