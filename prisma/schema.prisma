@@ -13,12 +13,14 @@ datasource db {
 }
 
 model Account {
-  id         String   @id() @default(uuid())
-  firebaseId String   @unique() @map("firebase_id")
-  imageUrl   String   @default("") @map("image_url")
-  fullName   String   @map("full_name")
-  status     String   @default("")
-  updatedAt  DateTime @updatedAt() @map("updated_at")
+  id           String   @id() @default(uuid())
+  firebaseId   String   @unique() @map("firebase_id")
+  emailAddress String   @unique @map("email_address")
+  imageUrl     String   @default("") @map("image_url")
+  fullName     String   @map("full_name")
+  status       String   @default("")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt() @map("updated_at")
 
   @@unique([id, firebaseId])
   @@map("accounts")
