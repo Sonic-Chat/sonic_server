@@ -58,4 +58,10 @@ export class AuthService {
     // Return credentials.
     return savedCredentials;
   }
+
+  public async getUser(user: Credentials): Promise<Credentials> {
+    return await this.credentialsService.getCredential({
+      firebaseId: user.firebaseId,
+    });
+  }
 }
