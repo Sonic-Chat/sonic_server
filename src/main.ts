@@ -8,6 +8,8 @@ async function bootstrap() {
   const prismaService: PrismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
 
+  app.setGlobalPrefix('api');
+
   await app.listen(process.env.PORT || 5000);
 }
 bootstrap();
