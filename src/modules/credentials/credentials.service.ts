@@ -11,6 +11,9 @@ export class CredentialsService {
   ): Promise<Credentials | null> {
     return await this.prismaService.credentials.findUnique({
       where: credentialsWhereUniqueInput,
+      include: {
+        account: true,
+      },
     });
   }
 
