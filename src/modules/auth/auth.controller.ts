@@ -1,7 +1,9 @@
 import { Credentials } from '@prisma/client';
 import { AuthService } from './auth.service';
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { RegisterAccountDto } from 'src/dto/auth/register-account.dto';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { User } from 'src/decorators/user.decorator';
 
 /**
  * Controller Implementation for Authentication Module.
@@ -9,6 +11,12 @@ import { RegisterAccountDto } from 'src/dto/auth/register-account.dto';
 @Controller('v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('identity')
+  @UseGuards(AuthGuard)
+  public async identity(@User() user: Credentials): Promise<Credentials> {
+    return await this.authService.getUser(user);
+  }
 
   /**
    * Controller Implementation for registering a new account.
