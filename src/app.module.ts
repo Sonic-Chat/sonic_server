@@ -1,8 +1,9 @@
+import { AccountModule } from './modules/account/account.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { Logger, Module } from '@nestjs/common';
 import { FirebaseModule } from './modules/firebase/firebase.module';
-import { DummyModule } from './modules/dummy/dummy.module';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './modules/auth/auth.module';
 
 const logger = new Logger('MikroORM');
 
@@ -14,7 +15,8 @@ const logger = new Logger('MikroORM');
     }),
     FirebaseModule,
     PrismaModule,
-    DummyModule,
+    AccountModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
