@@ -12,16 +12,26 @@ datasource db {
   referentialIntegrity = "prisma"
 }
 
-model Account {
+model Credentials {
   id           String   @id() @default(uuid())
   firebaseId   String   @unique() @map("firebase_id")
   emailAddress String   @unique @map("email_address")
-  imageUrl     String   @default("") @map("image_url")
-  fullName     String   @map("full_name")
-  status       String   @default("")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt() @map("updated_at")
+  account      Account?
 
-  @@unique([id, firebaseId])
+  @@unique([id, firebaseId, emailAddress])
+  @@map("credentials")
+}
+
+model Account {
+  id        String   @id() @default(uuid())
+  imageUrl  String   @default("") @map("image_url")
+  fullName  String   @map("full_name")
+  status    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt() @map("updated_at")
+
+  credentials   Credentials @relation(fields: [credentialsId], references: [id])
+  credentialsId String      @unique() @map("crerdentials_id")
+
   @@map("accounts")
 }
