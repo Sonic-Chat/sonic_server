@@ -17,7 +17,9 @@ export class FirebaseService implements OnModuleInit {
     );
 
     if (!admin.apps.length) {
-      admin.initializeApp(firebaseJson);
+      admin.initializeApp({
+        credential: admin.credential.cert(firebaseJson),
+      });
       this.logger.log('Firebase Admin is configured and ready to go');
     }
 
