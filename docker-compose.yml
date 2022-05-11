@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  sonic_mysql:
+    image: mysql:5.7
+    container_name: sonic_mysql
+    restart: always
+    ports:
+      - '127.0.0.1:8888:3306'
+      - '3309:3306'
+    env_file:
+      - mysql.env
+    volumes:
+      - sonic_mysql:/var/lib/mysql
+    networks:
+      - sonic_net
+
+networks:
+  sonic_net:
+    name: sonic_net
+
+volumes:
+  sonic_mysql:
+    driver: local

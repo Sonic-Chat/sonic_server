@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 
 @Injectable()
@@ -8,8 +9,12 @@ export class FirebaseService implements OnModuleInit {
   public firebaseFirestore: admin.firestore.Firestore;
   public firebaseMessaging: admin.messaging.Messaging;
 
+  constructor(private readonly configService: ConfigService) {}
+
   onModuleInit() {
-    const firebaseJson = JSON.parse(process.env.FIREBASE_JSON);
+    const firebaseJson = JSON.parse(
+      this.configService.get<string>('FIREBASE_JSON'),
+    );
 
     if (!admin.apps.length) {
       admin.initializeApp(firebaseJson);
