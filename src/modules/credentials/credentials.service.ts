@@ -1,13 +1,17 @@
 import { PrismaService } from './../prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Credentials, Prisma } from '@prisma/client';
+import { FirebaseService } from '../firebase/firebase.service';
 
 /**
  * Service Implementation for Credentials Module.
  */
 @Injectable()
 export class CredentialsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly firebaseService: FirebaseService,
+  ) {}
 
   /**
    * Service Implementation for fetching credentials.
@@ -45,13 +49,21 @@ export class CredentialsService {
    */
   public async deleteCredential(
     where: Prisma.CredentialsWhereUniqueInput,
-  ): Promise<Credentials> {
-    // Pass the parameters and return the result.
-    return await this.prismaService.credentials.delete({
-      where,
-      include: {
-        account: true,
-      },
-    });
+  ): Promise<void> {
+    // Fetching credentials record.
+    const credentials = await this.getCredential(where);
+
+    // Delete Firebase Account.
+    await this.firebaseService.firebaseAuth.deleteUser(where.firebaseId);
+
+    // Executing a transaction deleting the user account as well as credentials.
+    await this.prismaService.$transaction([
+      this.prismaService.account.delete({
+        where: { credentialsId: credentials.id },
+      }),
+      this.prismaService.credentials.delete({
+        where,
+      }),
+    ]);
   }
 }

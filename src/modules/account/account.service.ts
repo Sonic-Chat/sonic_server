@@ -22,4 +22,20 @@ export class AccountService {
       where,
     });
   }
+
+  /**
+   * Service Implementation for user account update.
+   * @param params User Update Params.
+   * @returns Updated Account Object.
+   */
+  public async updateUser(params: {
+    where: Prisma.AccountWhereUniqueInput;
+    data: Prisma.AccountUpdateInput;
+  }): Promise<Account> {
+    // Extract query and updated data from params.
+    const { where, data } = params;
+
+    // Update user account and return the result.
+    return await this.prismaService.account.update({ data, where });
+  }
 }
