@@ -1,6 +1,6 @@
 # Contributing
 
-When contributing to this repository, please discuss the changes you wish to make by submitting an [issue]https://github.com/Sonic-Chat/sonic_server/issues) first. It helps us understand your proposal in advance and discuss wether it is necessary or not.
+When contributing to this repository, please discuss the changes you wish to make by submitting an [issue](https://github.com/Sonic-Chat/sonic_server/issues) first. It helps us understand your proposal in advance and discuss wether it is necessary or not.
 
 Alternatively, you can contribute to resolve any of the [open issues](https://github.com/Sonic-Chat/sonic_server/issues) without the need for prior discussion.
 
