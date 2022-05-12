@@ -1,4 +1,5 @@
-import { Credentials } from '@prisma/client';
+import { AccountService } from './../account/account.service';
+import { Account, Credentials } from '@prisma/client';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { RegisterAccountDto } from 'src/dto/auth/register-account.dto';
 import { FirebaseService } from '../firebase/firebase.service';
@@ -12,6 +13,7 @@ import { AuthError } from 'src/enum/error-codes/auth/auth-error.enum';
 export class AuthService {
   constructor(
     private readonly credentialsService: CredentialsService,
+    private readonly accountService: AccountService,
     private readonly firebaseService: FirebaseService,
   ) {}
 
@@ -59,9 +61,15 @@ export class AuthService {
     return savedCredentials;
   }
 
-  public async getUser(user: Credentials): Promise<Credentials> {
-    return await this.credentialsService.getCredential({
-      firebaseId: user.firebaseId,
+  /**
+   * Service Implementation for user account retrieval.
+   * @param user Request User Object
+   * @returns Credentials object with user details.
+   */
+  public async getUser(user: Credentials): Promise<Account> {
+    // Return corresponding account object to client.
+    return await this.accountService.getUser({
+      credentialsId: user.id,
     });
   }
 }
