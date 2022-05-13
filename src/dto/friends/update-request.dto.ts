@@ -1,7 +1,7 @@
 import { FriendStatus } from '@prisma/client';
 import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 
-export class UpdatyeRequestDto {
+export class UpdateRequestDto {
   @IsNotEmpty()
   @IsUUID()
   public id: string;
