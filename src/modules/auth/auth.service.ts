@@ -6,6 +6,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { CredentialsService } from '../credentials/credentials.service';
 import { AuthError } from 'src/enum/error-codes/auth/auth-error.enum';
 import * as bcrypt from 'bcrypt';
+import { LoginAccountDto } from 'src/dto/auth/login-account.dto';
 
 /**
  * Service Implementation for Authentication Module.
@@ -45,7 +46,7 @@ export class AuthService {
       });
 
     if (checkUsernameCredentials) {
-      // Return error for duplicate email address.
+      // Return error for duplicate username.
       throw new BadRequestException({
         message: AuthError.ACCOUNT_ALREADY_EXISTS_FOR_USERNAME,
       });
@@ -77,6 +78,49 @@ export class AuthService {
 
     // Return credentials.
     return savedCredentials;
+  }
+
+  /**
+   * Service Implementation for user account login through Firebase custom token generation.
+   * @param loginAccountDto DTO Object for logging into account.
+   * @returns Object containing auth token.
+   */
+  public async generateCustomToken(
+    loginAccountDto: LoginAccountDto,
+  ): Promise<{ token: string }> {
+    // Fetch crednetials from the database.
+    const credentials = await this.credentialsService.getCredential({
+      username: loginAccountDto.username,
+    });
+
+    // Check if credentials exist in the database else throw an HTTP Exception.
+    if (!credentials) {
+      throw new BadRequestException({
+        message: AuthError.ACCOUNT_DOES_NOT_EXIST,
+      });
+    }
+
+    // Compare if the passwords match.
+    const passwordMatch = await bcrypt.compare(
+      loginAccountDto.password,
+      credentials.password,
+    );
+
+    // If passwords don't match, throw an HTTP Exception.
+    if (!passwordMatch) {
+      throw new BadRequestException({
+        message: AuthError.WRONG_PASSWORD,
+      });
+    }
+
+    // Generate a custom firebase token for the client to log in.
+    const firebaseToken =
+      await this.firebaseService.firebaseAuth.createCustomToken(
+        credentials.firebaseId,
+      );
+
+    // Return the token as an object.
+    return { token: firebaseToken };
   }
 
   /**
