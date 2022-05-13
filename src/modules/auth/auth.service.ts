@@ -5,6 +5,8 @@ import { RegisterAccountDto } from 'src/dto/auth/register-account.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CredentialsService } from '../credentials/credentials.service';
 import { AuthError } from 'src/enum/error-codes/auth/auth-error.enum';
+import * as bcrypt from 'bcrypt';
+import { LoginAccountDto } from 'src/dto/auth/login-account.dto';
 
 /**
  * Service Implementation for Authentication Module.
@@ -25,30 +27,47 @@ export class AuthService {
   public async registerAccount(
     registerAccountDto: RegisterAccountDto,
   ): Promise<Credentials> {
-    // Checking for duplicatre accounts under the same email address.
-    const checkCredentials = await this.credentialsService.getCredential({
+    // Checking for duplicate accounts under the same email address.
+    const checkEmailCredentials = await this.credentialsService.getCredential({
       emailAddress: registerAccountDto.email,
     });
 
-    if (checkCredentials) {
+    if (checkEmailCredentials) {
       // Return error for duplicate email address.
       throw new BadRequestException({
         message: AuthError.ACCOUNT_ALREADY_EXISTS_FOR_EMAIL,
       });
     }
 
+    // Checking for duplicate accounts under the same username.
+    const checkUsernameCredentials =
+      await this.credentialsService.getCredential({
+        username: registerAccountDto.username,
+      });
+
+    if (checkUsernameCredentials) {
+      // Return error for duplicate username.
+      throw new BadRequestException({
+        message: AuthError.ACCOUNT_ALREADY_EXISTS_FOR_USERNAME,
+      });
+    }
+
     // Register a new account with Firebase.
     const firebaseUser = await this.firebaseService.firebaseAuth.createUser({
       email: registerAccountDto.email,
-      password: registerAccountDto.password,
       displayName: registerAccountDto.fullName,
       photoURL: registerAccountDto.imageUrl,
     });
+
+    // Hashing the password.
+    const passwordHash = await bcrypt.hash(registerAccountDto.password, 10);
 
     // Save credentials along with account details in database.
     const savedCredentials = await this.credentialsService.createCredential({
       firebaseId: firebaseUser.uid,
       emailAddress: firebaseUser.email,
+      username: registerAccountDto.username,
+      password: passwordHash,
       account: {
         create: {
           fullName: firebaseUser.displayName,
@@ -59,6 +78,49 @@ export class AuthService {
 
     // Return credentials.
     return savedCredentials;
+  }
+
+  /**
+   * Service Implementation for user account login through Firebase custom token generation.
+   * @param loginAccountDto DTO Object for logging into account.
+   * @returns Object containing auth token.
+   */
+  public async generateCustomToken(
+    loginAccountDto: LoginAccountDto,
+  ): Promise<{ token: string }> {
+    // Fetch crednetials from the database.
+    const credentials = await this.credentialsService.getCredential({
+      username: loginAccountDto.username,
+    });
+
+    // Check if credentials exist in the database else throw an HTTP Exception.
+    if (!credentials) {
+      throw new BadRequestException({
+        message: AuthError.ACCOUNT_DOES_NOT_EXIST,
+      });
+    }
+
+    // Compare if the passwords match.
+    const passwordMatch = await bcrypt.compare(
+      loginAccountDto.password,
+      credentials.password,
+    );
+
+    // If passwords don't match, throw an HTTP Exception.
+    if (!passwordMatch) {
+      throw new BadRequestException({
+        message: AuthError.WRONG_PASSWORD,
+      });
+    }
+
+    // Generate a custom firebase token for the client to log in.
+    const firebaseToken =
+      await this.firebaseService.firebaseAuth.createCustomToken(
+        credentials.firebaseId,
+      );
+
+    // Return the token as an object.
+    return { token: firebaseToken };
   }
 
   /**

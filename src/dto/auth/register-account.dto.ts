@@ -13,6 +13,10 @@ export class RegisterAccountDto {
 
   @IsNotEmpty()
   @MinLength(5)
+  public username: string;
+
+  @IsNotEmpty()
+  @MinLength(5)
   public password: string;
 
   @IsNotEmpty()
