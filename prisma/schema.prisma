@@ -15,7 +15,9 @@ datasource db {
 model Credentials {
   id           String   @id() @default(uuid())
   firebaseId   String   @unique() @map("firebase_id")
+  username     String   @unique()
   emailAddress String   @unique @map("email_address")
+  password     String
   account      Account?
 
   @@unique([id, firebaseId, emailAddress])
