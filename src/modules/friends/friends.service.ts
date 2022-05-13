@@ -6,7 +6,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Credentials, Friends, FriendStatus } from '@prisma/client';
+import { Credentials, Friends, FriendStatus, Prisma } from '@prisma/client';
 import { AccountService } from '../account/account.service';
 
 /**
@@ -101,5 +101,52 @@ export class FriendsService {
         accounts: true,
       },
     });
+  }
+
+  /**
+   * Service Implementation for updating a friend request.
+   * @param user Logged In User Details.
+   * @param params Request Update Params.
+   * @returns Updated Account Object.
+   */
+  public async updateRequest(
+    user: Credentials,
+    params: {
+      where: Prisma.FriendsWhereUniqueInput;
+      data: Prisma.FriendsUpdateInput;
+    },
+  ): Promise<Friends> {
+    // Extract query and updated data from params.
+    const { where, data } = params;
+
+    // Get logged in user details.
+    const loggedInUser = await this.accountService.getUser({
+      credentialsId: user.id,
+    });
+
+    // Get friend's account details.
+    const request = await this.prismaService.friends.findFirst({
+      where: where,
+    });
+
+    // Throw an HTTP exception if user does not exist.
+    if (!request) {
+      throw new NotFoundException({
+        message: FriendsError.REQUEST_NOT_FOUND,
+      });
+    }
+
+    // If the status is stuck on requested, no changes can be made
+    // by the requester account.
+    if (
+      loggedInUser.id === request.requestedById &&
+      request.status === FriendStatus.REQUESTED
+    ) {
+      throw new BadRequestException({
+        message: FriendsError.ILLEGAL_ACTION,
+      });
+    }
+    // Update request and return the result.
+    return await this.prismaService.friends.update({ data, where });
   }
 }
