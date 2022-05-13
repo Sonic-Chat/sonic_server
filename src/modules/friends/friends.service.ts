@@ -6,7 +6,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Credentials, Friends } from '@prisma/client';
+import { Credentials, Friends, FriendStatus } from '@prisma/client';
 import { AccountService } from '../account/account.service';
 
 /**
@@ -83,6 +83,11 @@ export class FriendsService {
       data: {
         accounts: {
           connect: [{ id: userAccount.id }, { id: friendAccount.id }],
+        },
+        requestedBy: {
+          connect: {
+            id: userAccount.id,
+          },
         },
       },
     });
