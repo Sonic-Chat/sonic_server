@@ -12,6 +12,12 @@ datasource db {
   referentialIntegrity = "prisma"
 }
 
+enum FriendStatus {
+  REQUESTED
+  ACCEPTED
+  IGNORED
+}
+
 model Credentials {
   id           String   @id() @default(uuid())
   firebaseId   String   @unique() @map("firebase_id")
@@ -19,6 +25,8 @@ model Credentials {
   emailAddress String   @unique @map("email_address")
   password     String
   account      Account?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt() @map("updated_at")
 
   @@unique([id, firebaseId, emailAddress])
   @@map("credentials")
@@ -35,5 +43,18 @@ model Account {
   credentials   Credentials @relation(fields: [credentialsId], references: [id])
   credentialsId String      @unique() @map("crerdentials_id")
 
+  friends Friends[] @relation("friends")
+
   @@map("accounts")
+}
+
+model Friends {
+  id        String       @id() @default(uuid())
+  status    FriendStatus @default(REQUESTED)
+  accounts  Account[]    @relation("friends")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt() @map("updated_at")
+
+
+  @@map("friends")
 }
