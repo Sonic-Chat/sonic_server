@@ -28,7 +28,7 @@ export class AuthController {
    * @param registerAccountDto DTO Object for registering a new account.
    * @returns Credentials object.
    */
-  @Post('register')
+  @Post('create')
   public async registerAccount(
     @Body() registerAccountDto: RegisterAccountDto,
   ): Promise<Credentials> {
