@@ -19,6 +19,12 @@ export class FriendsService {
     private readonly accountService: AccountService,
   ) {}
 
+  public async getFriendRequest(
+    args: Prisma.FriendsFindFirstArgs,
+  ): Promise<Friends | null> {
+    return await this.prismaService.friends.findFirst(args);
+  }
+
   /**
    * Service Implementation for creating a friend request.
    * @param user Logged In User Details.
@@ -47,7 +53,7 @@ export class FriendsService {
     }
 
     // Check for pre-existing request between users.
-    const checkRequest = await this.prismaService.friends.findFirst({
+    const checkRequest = await this.getFriendRequest({
       where: {
         AND: [
           {
@@ -93,7 +99,7 @@ export class FriendsService {
     });
 
     // Return data to the client.
-    return await this.prismaService.friends.findFirst({
+    return await this.getFriendRequest({
       where: {
         id: request.id,
       },
