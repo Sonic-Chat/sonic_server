@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { FriendsService } from './friends.service';
@@ -39,7 +40,7 @@ export class FriendsController {
   @UseGuards(AuthGuard)
   public async getFriendRequest(
     @User() user: Credentials,
-    @Body() fetchRequestDto: fetchRequestDto,
+    @Query() fetchRequestDto: fetchRequestDto,
   ): Promise<Friends | null> {
     // Fetching logged in user account details.
     const account = await this.accountService.getUser({
