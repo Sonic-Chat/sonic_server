@@ -1,3 +1,4 @@
+import { FriendsModule } from './modules/friends/friends.module';
 import { CredentialsModule } from './modules/credentials/credentials.module';
 import { AccountModule } from './modules/account/account.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -19,6 +20,7 @@ const logger = new Logger('MikroORM');
     CredentialsModule,
     AccountModule,
     AuthModule,
+    FriendsModule,
   ],
 })
 export class AppModule {}
