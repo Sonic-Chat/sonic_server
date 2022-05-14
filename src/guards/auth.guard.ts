@@ -37,10 +37,20 @@ export class AuthGuard implements CanActivate {
         const firebaseUser =
           await this.firebaseService.firebaseAuth.verifyIdToken(authToken);
 
-        // Set user header on the request object.
-        request.user = await this.credentialsService.getCredential({
+        // Fetch user from database.
+        const serverUser = await this.credentialsService.getCredential({
           firebaseId: firebaseUser.uid,
         });
+
+        // Check if user exists, else throw an HTTP exception.
+        if (!serverUser) {
+          throw new ForbiddenException({
+            message: AuthError.UNAUTHENTICATED,
+          });
+        }
+
+        // Set user header on the request object.
+        request.user = serverUser;
 
         // Return true for authenticated.
         return true;
