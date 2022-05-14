@@ -17,8 +17,9 @@ import { Credentials, Friends } from '@prisma/client';
 import { UpdateRequestDto } from 'src/dto/friends/update-request.dto';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
 import { AccountService } from '../account/account.service';
-import { fetchRequestDto } from 'src/dto/friends/fetch-request.dto';
+import { FetchRequestDto } from 'src/dto/friends/fetch-request.dto';
 import { FriendsError } from 'src/enum/error-codes/friends/friends-error.enum';
+import { FetchRequestsDto } from 'src/dto/friends/fetch-requests.dto';
 
 /**
  * Controller Implementation for Friend Requests Module.
@@ -31,16 +32,55 @@ export class FriendsController {
   ) {}
 
   /**
+   * Controller Implementation for fetching friend requests.
+   * @param user Logged In User Details.
+   * @param fetchRequestsDto DTO Object to Fetch Friend Requests.
+   * @returns Friend Request Array.
+   */
+  @Get()
+  @UseGuards(AuthGuard)
+  public async getFriendRequests(
+    @User() user: Credentials,
+    @Query() fetchRequestsDto: FetchRequestsDto,
+  ): Promise<Friends[] | null> {
+    // Fetching logged in user account details.
+    const account = await this.accountService.getUser({
+      credentialsId: user.id,
+    });
+
+    // Fetching requests from database.
+    return await this.friendsService.getFriendRequests({
+      where: {
+        AND: [
+          {
+            accounts: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+          {
+            status: fetchRequestsDto.status,
+          },
+        ],
+      },
+      include: {
+        accounts: true,
+      },
+    });
+  }
+
+  /**
    * Controller Implementation for fetching a friend request.
-   * @param user Logged In User Details
-   * @param fetchRequestDto DTO Object to Fetch Friend Request
+   * @param user Logged In User Details.
+   * @param fetchRequestDto DTO Object to Fetch Friend Request.
    * @returns Friend Request Object or error.
    */
   @Get('account')
   @UseGuards(AuthGuard)
   public async getFriendRequest(
     @User() user: Credentials,
-    @Query() fetchRequestDto: fetchRequestDto,
+    @Query() fetchRequestDto: FetchRequestDto,
   ): Promise<Friends | null> {
     // Fetching logged in user account details.
     const account = await this.accountService.getUser({
