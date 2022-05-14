@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Credentials, Friends, FriendStatus, Prisma } from '@prisma/client';
 import { AccountService } from '../account/account.service';
+import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
 
 /**
  * Service Implementation for Friend Requests Module.
@@ -203,5 +204,53 @@ export class FriendsService {
     }
     // Update request and return the result.
     return await this.updateFriendRequest({ data, where });
+  }
+
+  /**
+   * Service Implementation for rejecting a friend request.
+   * @param user Logged In User Details.
+   * @param deleteRequestDto DTO Object for Deleting Friend Request.
+   * @returns Deleted Account Object.
+   */
+  public async deleteRequest(
+    user: Credentials,
+    deleteRequestDto: DeleteRequestDto,
+  ): Promise<Friends> {
+    // Fetch logged in account details.
+    const account = await this.accountService.getUser({
+      credentialsId: user.id,
+    });
+
+    // Fetch the friend request data from database.
+    const friend = await this.getFriendRequest({
+      where: {
+        AND: [
+          {
+            accounts: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+          {
+            id: deleteRequestDto.id,
+          },
+        ],
+      },
+    });
+
+    // If friend record does not exist, throw an HTTP exception.
+    if (!friend) {
+      throw new NotFoundException({
+        message: FriendsError.REQUEST_NOT_FOUND,
+      });
+    }
+
+    // Delete the record from database and return the result.
+    return await this.deleteFriendRequest({
+      where: {
+        id: deleteRequestDto.id,
+      },
+    });
   }
 }
