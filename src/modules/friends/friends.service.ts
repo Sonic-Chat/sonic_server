@@ -134,7 +134,7 @@ export class FriendsService {
     }
 
     // Create friend request data in database.
-    const request = await this.prismaService.friends.create({
+    const request = await this.createFriendRequest({
       data: {
         accounts: {
           connect: [{ id: userAccount.id }, { id: friendAccount.id }],
@@ -180,7 +180,7 @@ export class FriendsService {
     });
 
     // Get friend's account details.
-    const request = await this.prismaService.friends.findFirst({
+    const request = await this.getFriendRequest({
       where: where,
     });
 
@@ -202,6 +202,6 @@ export class FriendsService {
       });
     }
     // Update request and return the result.
-    return await this.prismaService.friends.update({ data, where });
+    return await this.updateFriendRequest({ data, where });
   }
 }
