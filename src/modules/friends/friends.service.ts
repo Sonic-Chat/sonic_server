@@ -19,10 +19,59 @@ export class FriendsService {
     private readonly accountService: AccountService,
   ) {}
 
+  /**
+   * Service Implementation to fetch single friend request.
+   * @param args Friends Find First Arguments.
+   * @returns Friends Object or null.
+   */
   public async getFriendRequest(
     args: Prisma.FriendsFindFirstArgs,
   ): Promise<Friends | null> {
     return await this.prismaService.friends.findFirst(args);
+  }
+
+  /**
+   * Service Implementation to fetch many friend requests.
+   * @param args Friends Find Many Arguments.
+   * @returns Friends Array or null.
+   */
+  public async getFriendRequests(
+    args: Prisma.FriendsFindManyArgs,
+  ): Promise<Friends[] | null> {
+    return await this.prismaService.friends.findMany(args);
+  }
+
+  /**
+   * Service Implementation to create friend request.
+   * @param args Friends Creation Arguments.
+   * @returns Friends Object.
+   */
+  public async createFriendRequest(
+    args: Prisma.FriendsCreateArgs,
+  ): Promise<Friends> {
+    return await this.prismaService.friends.create(args);
+  }
+
+  /**
+   * Service Implementation to update friend request.
+   * @param args Friends Update Arguments.
+   * @returns Friends Object.
+   */
+  public async updateFriendRequest(
+    args: Prisma.FriendsUpdateArgs,
+  ): Promise<Friends> {
+    return await this.prismaService.friends.update(args);
+  }
+
+  /**
+   * Service Implementation to delete friend request.
+   * @param args Friends Delete Arguments.
+   * @returns Friends Object.
+   */
+  public async deleteFriendRequest(
+    args: Prisma.FriendsDeleteArgs,
+  ): Promise<Friends> {
+    return await this.prismaService.friends.delete(args);
   }
 
   /**
