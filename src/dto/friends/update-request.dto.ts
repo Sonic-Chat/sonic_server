@@ -1,5 +1,5 @@
 import { FriendStatus } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEnum, IsIn, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class UpdateRequestDto {
   @IsNotEmpty()
@@ -7,6 +7,6 @@ export class UpdateRequestDto {
   public id: string;
 
   @IsNotEmpty()
-  @IsEnum(FriendStatus)
+  @IsIn(Object.values(FriendStatus))
   public status: FriendStatus;
 }
