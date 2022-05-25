@@ -53,6 +53,8 @@ model Account {
   friends  Friends[] @relation("friends")
 
   messages Message[]
+
+  chats Chat[] @relation("account_messages")
   @@map("accounts")
 }
 
@@ -71,6 +73,17 @@ model Friends {
   @@map("friends")
 }
 
+model Chat {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt() @map("updated_at")
+
+  participants Account[] @relation("account_messages")
+  messages     Message[]
+
+  @@map("chats")
+}
+
 model Message {
   id      String      @id() @default(uuid())
   type    MessageType @default(TEXT)
@@ -82,6 +95,8 @@ model Message {
   image   Image?  @relation(fields: [imageId], references: [id], onDelete: Cascade)
   imageId String? @map("image_id")
 
+  Chat   Chat?   @relation(fields: [chatId], references: [id])
+  chatId String? @map("chat_id")
   @@map("messages")
 }
 
