@@ -18,6 +18,12 @@ enum FriendStatus {
   IGNORED
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  IMAGE_TEXT
+}
+
 model Credentials {
   id           String   @id() @default(uuid())
   firebaseId   String   @unique() @map("firebase_id")
@@ -40,24 +46,51 @@ model Account {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt() @map("updated_at")
 
-  credentials   Credentials @relation(fields: [credentialsId], references: [id])
-  credentialsId String      @unique() @map("crerdentials_id")
+  credentials   Credentials @relation(fields: [credentialsId], references: [id], onDelete: Cascade)
+  credentialsId String      @unique() @map("credentials_id")
 
   requests Friends[]
   friends  Friends[] @relation("friends")
 
+  messages Message[]
   @@map("accounts")
 }
 
 model Friends {
   id            String       @id() @default(uuid())
   status        FriendStatus @default(REQUESTED)
-  requestedBy   Account      @relation(fields: [requestedById], references: [id])
   requestedById String       @map("requested_by_id")
-  accounts      Account[]    @relation("friends")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt() @map("updated_at")
 
+  requestedBy Account @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+
+  accounts Account[] @relation("friends")
+
 
   @@map("friends")
+}
+
+model Message {
+  id      String      @id() @default(uuid())
+  type    MessageType @default(TEXT)
+  message String?
+
+  sentBy   Account @relation(fields: [sentById], references: [id], onDelete: Cascade)
+  sentById String  @map("sent_by_id")
+
+  image   Image?  @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  imageId String? @map("image_id")
+
+  @@map("messages")
+}
+
+model Image {
+  id         String @id() @default(uuid())
+  firebaseId String @unique() @map("firebase_id")
+  imageUrl   String @map("image_url")
+
+  messages Message[]
+
+  @@map("images")
 }
