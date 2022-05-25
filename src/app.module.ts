@@ -6,6 +6,7 @@ import { Logger, Module } from '@nestjs/common';
 import { FirebaseModule } from './modules/firebase/firebase.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 const logger = new Logger('MikroORM');
 
@@ -21,6 +22,7 @@ const logger = new Logger('MikroORM');
     AccountModule,
     AuthModule,
     FriendsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
