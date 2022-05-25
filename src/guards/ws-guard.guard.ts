@@ -27,9 +27,9 @@ export class WSGuardGuard implements CanActivate {
     const client = wsArgumentsHost.getClient<Socket>();
     const data = wsArgumentsHost.getData();
     // Check if authentication header is present and valid.
-    if (data.authorization && data.authorization.split(' ')[0] === 'Bearer') {
+    if (data.authorization) {
       // Extract token from the header.
-      const authToken = data.authorization.split(' ')[1];
+      const authToken = data.authorization;
 
       try {
         // Authenticate token using firebase.
