@@ -10,6 +10,15 @@ export class ChatService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
+   * Service Implementation for getting a chat.
+   * @param args Chat Fetch Arguments.
+   * @returns Chat Object.
+   */
+  public async getChat(args: Prisma.ChatFindUniqueArgs): Promise<Chat> {
+    return await this.prismaService.chat.findUnique(args);
+  }
+
+  /**
    * Service Implementation for creating a chat.
    * @param args Chat Creation Arguments.
    * @returns Newly Created Chat Object.
