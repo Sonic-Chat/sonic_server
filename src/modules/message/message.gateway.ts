@@ -12,6 +12,7 @@ import { WebSocket as Socket } from 'ws';
 import { WSAuthGuard } from 'src/guards/ws-auth.guard';
 import { UseGuards } from '@nestjs/common';
 import { MessageService } from './message.service';
+import { Credentials } from '@prisma/client';
 
 /**
  * Controller Implementation for Chat Message Module.
@@ -32,6 +33,20 @@ export class MessageGateway {
     @MessageBody() connectServerDto: ConnectServerDto,
   ): Promise<void> {
     return this.messageService.addConnectedUser(connectServerDto, client);
+  }
+
+  /**
+   * Controller Implementation for fetching chats.
+   * @param user Logged In User Details.
+   * @param client Client Socket Object
+   */
+  @SubscribeMessage('sync-message')
+  @UseGuards(WSAuthGuard)
+  public async syncMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() user: Credentials,
+  ): Promise<void> {
+    return this.messageService.syncMessages(client, user);
   }
 
   /**
