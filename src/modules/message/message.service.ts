@@ -119,6 +119,16 @@ export class MessageService {
   }
 
   /**
+   * Service Implementation for disconnecting server.
+   * @param user Logged In User.
+   */
+  public async disonnectUser(user: Credentials): Promise<void> {
+    this.connectedUsers = this.connectedUsers.filter(
+      (connectedUser) => connectedUser.user.id !== user['account']['id'],
+    );
+  }
+
+  /**
    * Service Implementation for fetching chats.
    * @param user Logged In User Details.
    * @param client Client Socket Object
