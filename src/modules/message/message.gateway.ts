@@ -1,3 +1,4 @@
+import { CreateMessageDto } from 'src/dto/chat/create-message.dto';
 import { ConnectServerDto } from './../../dto/chat/connect-server.dto';
 import {
   ConnectedSocket,
@@ -29,5 +30,19 @@ export class MessageGateway {
     @MessageBody() connectServerDto: ConnectServerDto,
   ): Promise<void> {
     return this.messageService.addConnectedUser(connectServerDto, client);
+  }
+
+  /**
+   * Controller Implementation for creating a message.
+   * @param createMessageDto DTO Object for Create Message Event.
+   * @param client Client Socket Object
+   */
+  @SubscribeMessage('message')
+  @UseGuards(WSAuthGuard)
+  public async sendMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() createMessageDto: CreateMessageDto,
+  ): Promise<void> {
+    return this.messageService.sendMessage(client, createMessageDto);
   }
 }
