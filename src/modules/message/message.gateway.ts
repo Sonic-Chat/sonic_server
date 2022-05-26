@@ -1,3 +1,4 @@
+import { DeleteMessageDto } from './../../dto/chat/delete-message.dto';
 import { UpdateMessageDto } from './../../dto/chat/update-message.dto';
 import { CreateMessageDto } from 'src/dto/chat/create-message.dto';
 import { ConnectServerDto } from './../../dto/chat/connect-server.dto';
@@ -59,5 +60,19 @@ export class MessageGateway {
     @MessageBody() updateMessageDto: UpdateMessageDto,
   ): Promise<void> {
     return this.messageService.updateMessage(client, updateMessageDto);
+  }
+
+  /**
+   * Controller Implementation for deleting a message.
+   * @param deleteMessageDto DTO Object for Delete Message Event.
+   * @param client Client Socket Object
+   */
+  @SubscribeMessage('delete-message')
+  @UseGuards(WSAuthGuard)
+  public async deleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() deleteMessageDto: DeleteMessageDto,
+  ): Promise<void> {
+    return this.messageService.deleteMessage(client, deleteMessageDto);
   }
 }
