@@ -44,8 +44,10 @@ export class MessageService {
     connectServerDto: ConnectServerDto,
     client: Socket,
   ): Promise<void> {
+    // Validate the DTO object.
     const errors = connectServerDtoVerify(connectServerDto);
 
+    // Send errors to client.
     if (errors.length !== 0) {
       client.send(
         JSON.stringify({
@@ -57,6 +59,7 @@ export class MessageService {
       return;
     }
 
+    // Check if the user is already connected.
     const checkUser = this.connectedUsers.find(
       (connectedUser) =>
         connectedUser.user.id === connectServerDto.user['account']['id'],
@@ -73,6 +76,7 @@ export class MessageService {
       return;
     }
 
+    // Persist the connected user details.
     this.connectedUsers.push({
       user: connectServerDto.user['account'],
       socket: client,
