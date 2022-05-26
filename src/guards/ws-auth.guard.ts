@@ -1,6 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { WsArgumentsHost } from '@nestjs/common/interfaces';
-import { Observable } from 'rxjs';
 import { AuthError } from 'src/enum/error-codes/auth/auth-error.enum';
 import { CredentialsService } from 'src/modules/credentials/credentials.service';
 import { FirebaseService } from 'src/modules/firebase/firebase.service';
@@ -10,7 +9,7 @@ import { WebSocket as Socket } from 'ws';
  * WS Guard Service Implementation for Firebase account authentication.
  */
 @Injectable()
-export class WSGuardGuard implements CanActivate {
+export class WSAuthGuard implements CanActivate {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly credentialsService: CredentialsService,
@@ -43,26 +42,36 @@ export class WSGuardGuard implements CanActivate {
 
         // Check if user exists, else send an exception.
         if (!serverUser) {
-          client.send({
-            type: 'error',
-            message: AuthError.UNAUTHENTICATED,
-          });
+          client.send(
+            JSON.stringify({
+              type: 'error',
+              message: AuthError.UNAUTHENTICATED,
+            }),
+          );
         }
+
+        // Set User header on WS Request.
+        delete wsArgumentsHost.getData()['authorization'];
+        wsArgumentsHost.getData()['user'] = serverUser;
 
         // Return true for authenticated.
         return true;
       } catch (error) {
         console.log(error);
-        client.send({
-          type: 'error',
-          message: AuthError.UNAUTHENTICATED,
-        });
+        client.send(
+          JSON.stringify({
+            type: 'error',
+            message: AuthError.UNAUTHENTICATED,
+          }),
+        );
       }
     } else {
-      client.send({
-        type: 'error',
-        message: AuthError.UNAUTHENTICATED,
-      });
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          message: AuthError.UNAUTHENTICATED,
+        }),
+      );
     }
   }
 
