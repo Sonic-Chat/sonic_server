@@ -1,3 +1,4 @@
+import { ChatService } from './../chat/chat.service';
 import { FriendsError } from './../../enum/error-codes/friends/friends-error.enum';
 import { CreateRequestDto } from './../../dto/friends/create-request.dto';
 import { PrismaService } from './../prisma/prisma.service';
@@ -6,7 +7,13 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Credentials, Friends, FriendStatus, Prisma } from '@prisma/client';
+import {
+  Credentials,
+  Friends,
+  FriendStatus,
+  Prisma,
+  Account,
+} from '@prisma/client';
 import { AccountService } from '../account/account.service';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
 
@@ -18,6 +25,7 @@ export class FriendsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly accountService: AccountService,
+    private readonly chatService: ChatService,
   ) {}
 
   /**
@@ -183,6 +191,9 @@ export class FriendsService {
     // Get friend's account details.
     const request = await this.getFriendRequest({
       where: where,
+      include: {
+        accounts: true,
+      },
     });
 
     // Throw an HTTP exception if user does not exist.
@@ -202,6 +213,28 @@ export class FriendsService {
         message: FriendsError.ILLEGAL_ACTION,
       });
     }
+
+    // If the request is already accepted,
+    // no further action can be taken on it.
+    if (request.status === FriendStatus.ACCEPTED) {
+      throw new BadRequestException({
+        message: FriendsError.ILLEGAL_ACTION,
+      });
+    }
+
+    // If the request is getting accepted, create a new chat object.
+    if (params.data.status === FriendStatus.ACCEPTED) {
+      await this.chatService.createChat({
+        data: {
+          participants: {
+            connect: request['accounts'].map((account: Account) => ({
+              id: account.id,
+            })),
+          },
+        },
+      });
+    }
+
     // Update request and return the result.
     return await this.updateFriendRequest({ data, where });
   }
