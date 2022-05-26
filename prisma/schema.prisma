@@ -95,8 +95,8 @@ model Message {
   image   Image?  @relation(fields: [imageId], references: [id], onDelete: Cascade)
   imageId String? @map("image_id")
 
-  Chat   Chat?   @relation(fields: [chatId], references: [id])
-  chatId String? @map("chat_id")
+  chat   Chat   @relation(fields: [chatId], references: [id])
+  chatId String @map("chat_id")
   @@map("messages")
 }
 
