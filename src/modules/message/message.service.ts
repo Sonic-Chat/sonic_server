@@ -8,7 +8,13 @@ import {
 } from './../../dto/chat/update-message.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
 import { Injectable } from '@nestjs/common';
-import { Account, Message, MessageType, Prisma } from '@prisma/client';
+import {
+  Account,
+  Credentials,
+  Message,
+  MessageType,
+  Prisma,
+} from '@prisma/client';
 import {
   ConnectServerDto,
   verifyDto as connectServerDtoVerify,
@@ -108,6 +114,44 @@ export class MessageService {
       JSON.stringify({
         type: 'success',
         message: ['CONNECTED'],
+      }),
+    );
+  }
+
+  /**
+   * Service Implementation for fetching chats.
+   * @param user Logged In User Details.
+   * @param client Client Socket Object
+   */
+  public async syncMessages(client: Socket, user: Credentials): Promise<void> {
+    // Fetch chats the user is part of.
+    const chatModels = await this.chatService.getChats({
+      where: {
+        participants: {
+          some: {
+            credentialsId: user.id,
+          },
+        },
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        participants: true,
+      },
+    });
+
+    // Send chats to the user.
+    client.send(
+      JSON.stringify({
+        type: 'sync-chat',
+        details: {
+          chats: chatModels,
+        },
       }),
     );
   }
