@@ -1,4 +1,8 @@
 import {
+  DeleteMessageDto,
+  verifyDto as deletemessageDtoVerify,
+} from './../../dto/chat/delete-message.dto';
+import {
   UpdateMessageDto,
   verifyDto as updateMessageDtoVerify,
 } from './../../dto/chat/update-message.dto';
@@ -45,6 +49,12 @@ export class MessageService {
     args: Prisma.MessageUpdateArgs,
   ): Promise<Message> {
     return await this.prismaService.message.update(args);
+  }
+
+  public async deleteMessageModel(
+    args: Prisma.MessageDeleteArgs,
+  ): Promise<Message> {
+    return await this.prismaService.message.delete(args);
   }
 
   /**
@@ -210,6 +220,11 @@ export class MessageService {
     }
   }
 
+  /**
+   * Service Implementation for updating a message.
+   * @param updateMessageDto DTO Object for Update Message Event.
+   * @param client Client Socket Object
+   */
   public async updateMessage(
     client: Socket,
     updateMessageDto: UpdateMessageDto,
@@ -268,6 +283,7 @@ export class MessageService {
       (user) => user.user.id === recieverId,
     );
 
+    // Update Message in Database.
     const messageDto = await this.updateMessageModel({
       where: {
         id: updateMessageDto.messageId,
@@ -285,6 +301,90 @@ export class MessageService {
           details: {
             chatId: chatModel.id,
             message: messageDto,
+          },
+        }),
+      );
+    }
+  }
+
+  /**
+   * Service Implementation for deleting a message.
+   * @param deleteMessageDto DTO Object for Delete Message Event.
+   * @param client Client Socket Object
+   */
+  public async deleteMessage(
+    client: Socket,
+    deleteMessageDto: DeleteMessageDto,
+  ): Promise<void> {
+    // Validate the DTO object.
+    const errors = deletemessageDtoVerify(deleteMessageDto);
+
+    // Send errors to client.
+    if (errors.length !== 0) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: errors,
+        }),
+      );
+
+      return;
+    }
+
+    // Check for message existence and message type.
+    const checkMessage = await this.getMessageModel({
+      where: {
+        id: deleteMessageDto.messageId,
+      },
+    });
+
+    if (!checkMessage) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: [ChatError.ILLEGAL_ACTION],
+        }),
+      );
+
+      return;
+    }
+
+    // Fetch Chat Object from Database.
+    const chatModel = await this.chatService.getChat({
+      where: {
+        id: checkMessage.chatId,
+      },
+      include: {
+        participants: true,
+      },
+    });
+
+    // Filter out the reciever ID.
+    const recieverId = chatModel['participants'].filter(
+      (participant: Account) =>
+        participant.id !== deleteMessageDto.user['account']['id'],
+    )[0].id;
+
+    // Filter the connected user if present.
+    const reciever = this.connectedUsers.find(
+      (user) => user.user.id === recieverId,
+    );
+
+    // Delete Message from Database.
+    await this.deleteMessageModel({
+      where: {
+        id: deleteMessageDto.messageId,
+      },
+    });
+
+    // If reciever is connected, send the message.
+    if (reciever) {
+      reciever.socket.send(
+        JSON.stringify({
+          type: 'delete-message',
+          details: {
+            chatId: chatModel.id,
+            messageId: deleteMessageDto.messageId,
           },
         }),
       );
