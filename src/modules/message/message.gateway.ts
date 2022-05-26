@@ -28,11 +28,21 @@ export class MessageGateway {
    */
   @SubscribeMessage('connect')
   @UseGuards(WSAuthGuard)
-  public async handleMessage(
+  public async addConnectedUser(
     @ConnectedSocket() client: Socket,
     @MessageBody() connectServerDto: ConnectServerDto,
   ): Promise<void> {
     return this.messageService.addConnectedUser(connectServerDto, client);
+  }
+
+  /**
+   * Controller Implementation for disconnecting from server.
+   * @param user Logged In User
+   */
+  @SubscribeMessage('disconnect')
+  @UseGuards(WSAuthGuard)
+  public async disconnectUser(@MessageBody() user: any): Promise<void> {
+    return this.messageService.disonnectUser(user.user);
   }
 
   /**
