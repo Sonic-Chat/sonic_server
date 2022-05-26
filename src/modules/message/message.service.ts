@@ -1,8 +1,14 @@
-import { verifyDto as connectServerDtoVerify } from './../../dto/chat/connect-server.dto';
+import {
+  UpdateMessageDto,
+  verifyDto as updateMessageDtoVerify,
+} from './../../dto/chat/update-message.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
 import { Injectable } from '@nestjs/common';
 import { Account, Message, MessageType, Prisma } from '@prisma/client';
-import { ConnectServerDto } from 'src/dto/chat/connect-server.dto';
+import {
+  ConnectServerDto,
+  verifyDto as connectServerDtoVerify,
+} from 'src/dto/chat/connect-server.dto';
 import { WebSocket as Socket } from 'ws';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -25,7 +31,7 @@ export class MessageService {
 
   public async getMessageModel(
     args: Prisma.MessageFindUniqueArgs,
-  ): Promise<Message> {
+  ): Promise<Message | null> {
     return await this.prismaService.message.findUnique(args);
   }
 
@@ -33,6 +39,12 @@ export class MessageService {
     args: Prisma.MessageCreateArgs,
   ): Promise<Message> {
     return await this.prismaService.message.create(args);
+  }
+
+  public async updateMessageModel(
+    args: Prisma.MessageUpdateArgs,
+  ): Promise<Message> {
+    return await this.prismaService.message.update(args);
   }
 
   /**
@@ -191,6 +203,87 @@ export class MessageService {
           type: 'create-message',
           details: {
             chatId: createMessageDto.chatId,
+            message: messageDto,
+          },
+        }),
+      );
+    }
+  }
+
+  public async updateMessage(
+    client: Socket,
+    updateMessageDto: UpdateMessageDto,
+  ): Promise<void> {
+    // Validate the DTO object.
+    const errors = updateMessageDtoVerify(updateMessageDto);
+
+    // Send errors to client.
+    if (errors.length !== 0) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: errors,
+        }),
+      );
+
+      return;
+    }
+
+    // Check for message existence and message type.
+    const checkMessage = await this.getMessageModel({
+      where: {
+        id: updateMessageDto.messageId,
+      },
+    });
+
+    if (!checkMessage || checkMessage.type === MessageType.IMAGE) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: [ChatError.MESSAGE_MISSING],
+        }),
+      );
+
+      return;
+    }
+
+    // Fetch Chat Object from Database.
+    const chatModel = await this.chatService.getChat({
+      where: {
+        id: checkMessage.chatId,
+      },
+      include: {
+        participants: true,
+      },
+    });
+
+    // Filter out the reciever ID.
+    const recieverId = chatModel['participants'].filter(
+      (participant: Account) =>
+        participant.id !== updateMessageDto.user['account']['id'],
+    )[0].id;
+
+    // Filter the connected user if present.
+    const reciever = this.connectedUsers.find(
+      (user) => user.user.id === recieverId,
+    );
+
+    const messageDto = await this.updateMessageModel({
+      where: {
+        id: updateMessageDto.messageId,
+      },
+      data: {
+        message: updateMessageDto.message,
+      },
+    });
+
+    // If reciever is connected, send the message.
+    if (reciever) {
+      reciever.socket.send(
+        JSON.stringify({
+          type: 'update-message',
+          details: {
+            chatId: chatModel.id,
             message: messageDto,
           },
         }),
