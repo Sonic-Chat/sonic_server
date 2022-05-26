@@ -1,3 +1,4 @@
+import { UpdateMessageDto } from './../../dto/chat/update-message.dto';
 import { CreateMessageDto } from 'src/dto/chat/create-message.dto';
 import { ConnectServerDto } from './../../dto/chat/connect-server.dto';
 import {
@@ -37,12 +38,26 @@ export class MessageGateway {
    * @param createMessageDto DTO Object for Create Message Event.
    * @param client Client Socket Object
    */
-  @SubscribeMessage('message')
+  @SubscribeMessage('create-message')
   @UseGuards(WSAuthGuard)
   public async sendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() createMessageDto: CreateMessageDto,
   ): Promise<void> {
     return this.messageService.sendMessage(client, createMessageDto);
+  }
+
+  /**
+   * Controller Implementation for updating a message.
+   * @param updateMessageDto DTO Object for Update Message Event.
+   * @param client Client Socket Object
+   */
+  @SubscribeMessage('update-message')
+  @UseGuards(WSAuthGuard)
+  public async updateMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() updateMessageDto: UpdateMessageDto,
+  ): Promise<void> {
+    return this.messageService.updateMessage(client, updateMessageDto);
   }
 }
