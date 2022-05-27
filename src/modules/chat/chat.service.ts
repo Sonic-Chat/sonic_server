@@ -7,7 +7,12 @@ import { Chat, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class ChatService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {
+    this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
+      console.log('Query: ' + event.query);
+      console.log('Duration: ' + event.duration + 'ms');
+    });
+  }
 
   /**
    * Service Implementation for getting chats.

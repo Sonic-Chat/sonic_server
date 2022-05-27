@@ -37,7 +37,12 @@ export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly chatService: ChatService,
-  ) {}
+  ) {
+    this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
+      console.log('Query: ' + event.query);
+      console.log('Duration: ' + event.duration + 'ms');
+    });
+  }
 
   public async getMessageModel(
     args: Prisma.MessageFindUniqueArgs,

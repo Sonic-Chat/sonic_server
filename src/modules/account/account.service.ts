@@ -7,7 +7,12 @@ import { Account, Prisma } from '@prisma/client';
  */
 @Injectable()
 export class AccountService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {
+    this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
+      console.log('Query: ' + event.query);
+      console.log('Duration: ' + event.duration + 'ms');
+    });
+  }
 
   /**
    * Service implementation for fetching a user.

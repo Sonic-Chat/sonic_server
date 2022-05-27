@@ -26,7 +26,12 @@ export class FriendsService {
     private readonly prismaService: PrismaService,
     private readonly accountService: AccountService,
     private readonly chatService: ChatService,
-  ) {}
+  ) {
+    this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
+      console.log('Query: ' + event.query);
+      console.log('Duration: ' + event.duration + 'ms');
+    });
+  }
 
   /**
    * Service Implementation to fetch single friend request.
