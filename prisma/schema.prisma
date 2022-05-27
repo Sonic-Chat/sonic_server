@@ -34,6 +34,8 @@ model Credentials {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt() @map("updated_at")
 
+  token Token?
+
   @@unique([id, firebaseId, emailAddress])
   @@map("credentials")
 }
@@ -85,9 +87,11 @@ model Chat {
 }
 
 model Message {
-  id      String      @id() @default(uuid())
-  type    MessageType @default(TEXT)
-  message String?
+  id        String      @id() @default(uuid())
+  type      MessageType @default(TEXT)
+  message   String?
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt() @map("updated_at")
 
   sentBy   Account @relation(fields: [sentById], references: [id], onDelete: Cascade)
   sentById String  @map("sent_by_id")
@@ -101,11 +105,25 @@ model Message {
 }
 
 model Image {
-  id         String @id() @default(uuid())
-  firebaseId String @unique() @map("firebase_id")
-  imageUrl   String @map("image_url")
+  id         String   @id() @default(uuid())
+  firebaseId String   @unique() @map("firebase_id")
+  imageUrl   String   @map("image_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt() @map("updated_at")
 
   messages Message[]
 
   @@map("images")
+}
+
+model Token {
+  id        String   @id() @default(uuid())
+  token     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt() @map("updated_at")
+
+  credentials   Credentials @relation(fields: [credentialsId], references: [id])
+  credentialsId String      @unique() @map("credentials_id")
+
+  @@map("tokens")
 }
