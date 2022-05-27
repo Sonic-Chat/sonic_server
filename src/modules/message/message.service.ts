@@ -44,24 +44,44 @@ export class MessageService {
     });
   }
 
+  /**
+   * Service Implementation to fetch message.
+   * @param args Message Find Unique Args
+   * @returns Message Object
+   */
   public async getMessageModel(
     args: Prisma.MessageFindUniqueArgs,
   ): Promise<Message | null> {
     return await this.prismaService.message.findUnique(args);
   }
 
+  /**
+   * Service Implementation to create message.
+   * @param args Message Create Args
+   * @returns Message Object
+   */
   public async createMessageModel(
     args: Prisma.MessageCreateArgs,
   ): Promise<Message> {
     return await this.prismaService.message.create(args);
   }
 
+  /**
+   * Service Implementation to update message.
+   * @param args Message Update Args
+   * @returns Message Object
+   */
   public async updateMessageModel(
     args: Prisma.MessageUpdateArgs,
   ): Promise<Message> {
     return await this.prismaService.message.update(args);
   }
 
+  /**
+   * Service Implementation to delete message.
+   * @param args Message Delete Args
+   * @returns Message Object
+   */
   public async deleteMessageModel(
     args: Prisma.MessageDeleteArgs,
   ): Promise<Message> {
