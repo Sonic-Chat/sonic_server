@@ -26,6 +26,7 @@ import {
   verifyDto as createMessageDtoVerify,
 } from 'src/dto/chat/create-message.dto';
 import { ChatService } from '../chat/chat.service';
+import { NotificationService } from '../notification/notification.service';
 
 /**
  * Service Implementation for Chat Message Module.
@@ -37,6 +38,7 @@ export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly chatService: ChatService,
+    private readonly notificationService: NotificationService,
   ) {
     this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
       console.log('Query: ' + event.query);
@@ -295,6 +297,43 @@ export class MessageService {
             message: messageDto,
           },
         }),
+      );
+    } else {
+      let body = '';
+
+      // Body for the notification.
+      switch (createMessageDto.type) {
+        case MessageType.IMAGE: {
+          body = 'Image 📸';
+          break;
+        }
+        case MessageType.IMAGE_TEXT: {
+          body = `📸 ${createMessageDto.message!}`;
+          break;
+        }
+        case MessageType.TEXT: {
+          body = createMessageDto.message!;
+          break;
+        }
+        default: {
+          body = 'New Message';
+        }
+      }
+
+      // Send notification to recipient.
+      await this.notificationService.sendNotification(
+        reciever.user,
+        {
+          type: 'create-message',
+          details: {
+            chatId: createMessageDto.chatId,
+            message: messageDto,
+          },
+        },
+        {
+          title: `${reciever.user.fullName} sent a message`,
+          body,
+        },
       );
     }
   }

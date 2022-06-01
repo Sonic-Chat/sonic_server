@@ -16,6 +16,8 @@ import {
 } from '@prisma/client';
 import { AccountService } from '../account/account.service';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
+import { NotificationService } from '../notification/notification.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 /**
  * Service Implementation for Friend Requests Module.
@@ -26,6 +28,7 @@ export class FriendsService {
     private readonly prismaService: PrismaService,
     private readonly accountService: AccountService,
     private readonly chatService: ChatService,
+    private readonly notificationService: NotificationService,
   ) {
     this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
       console.log('Query: ' + event.query);
@@ -161,8 +164,8 @@ export class FriendsService {
       },
     });
 
-    // Return data to the client.
-    return await this.getFriendRequest({
+    // Fetch request details.
+    const newRequest = await this.getFriendRequest({
       where: {
         id: request.id,
       },
@@ -170,6 +173,18 @@ export class FriendsService {
         accounts: true,
       },
     });
+
+    // Send new request notification.
+    await this.notificationService.sendNotification(
+      friendAccount,
+      {},
+      {
+        title: 'New request',
+        body: `${userAccount.fullName} sent you a friend request.`,
+      },
+    );
+
+    return newRequest;
   }
 
   /**
@@ -227,6 +242,9 @@ export class FriendsService {
       });
     }
 
+    // Update request and return the result.
+    const updatedRequest = await this.updateFriendRequest({ data, where });
+
     // If the request is getting accepted, create a new chat object.
     if (params.data.status === FriendStatus.ACCEPTED) {
       await this.chatService.createChat({
@@ -238,10 +256,23 @@ export class FriendsService {
           },
         },
       });
+
+      // Send accepted request notification.
+      await this.notificationService.sendNotification(
+        loggedInUser,
+        {},
+        {
+          title: 'Request Accepted',
+          body: `${
+            request['accounts'].filter(
+              (account: Account) => account.id !== loggedInUser.id,
+            )[0].fullName
+          } sent you a friend request.`,
+        },
+      );
     }
 
-    // Update request and return the result.
-    return await this.updateFriendRequest({ data, where });
+    return updatedRequest;
   }
 
   /**
