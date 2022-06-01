@@ -16,6 +16,8 @@ import {
 } from '@prisma/client';
 import { AccountService } from '../account/account.service';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
+import { NotificationService } from '../notification/notification.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 /**
  * Service Implementation for Friend Requests Module.
@@ -25,7 +27,9 @@ export class FriendsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly accountService: AccountService,
+    private readonly credentialsService: CredentialsService,
     private readonly chatService: ChatService,
+    private readonly notificationService: NotificationService,
   ) {
     this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
       console.log('Query: ' + event.query);
@@ -161,8 +165,8 @@ export class FriendsService {
       },
     });
 
-    // Return data to the client.
-    return await this.getFriendRequest({
+    // Fetch request details.
+    const newRequest = await this.getFriendRequest({
       where: {
         id: request.id,
       },
@@ -170,6 +174,18 @@ export class FriendsService {
         accounts: true,
       },
     });
+
+    // Send new request notification.
+    await this.notificationService.sendNotification(
+      friendAccount,
+      {},
+      {
+        title: 'New request',
+        body: `${userAccount.fullName} sent you a friend request.`,
+      },
+    );
+
+    return newRequest;
   }
 
   /**
