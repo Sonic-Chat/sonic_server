@@ -27,7 +27,6 @@ export class FriendsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly accountService: AccountService,
-    private readonly credentialsService: CredentialsService,
     private readonly chatService: ChatService,
     private readonly notificationService: NotificationService,
   ) {
