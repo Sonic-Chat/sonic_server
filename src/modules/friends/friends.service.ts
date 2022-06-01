@@ -243,6 +243,9 @@ export class FriendsService {
       });
     }
 
+    // Update request and return the result.
+    const updatedRequest = await this.updateFriendRequest({ data, where });
+
     // If the request is getting accepted, create a new chat object.
     if (params.data.status === FriendStatus.ACCEPTED) {
       await this.chatService.createChat({
@@ -254,10 +257,23 @@ export class FriendsService {
           },
         },
       });
+
+      // Send accepted request notification.
+      await this.notificationService.sendNotification(
+        loggedInUser,
+        {},
+        {
+          title: 'Request Accepted',
+          body: `${
+            request['accounts'].filter(
+              (account: Account) => account.id !== loggedInUser.id,
+            )[0].fullName
+          } sent you a friend request.`,
+        },
+      );
     }
 
-    // Update request and return the result.
-    return await this.updateFriendRequest({ data, where });
+    return updatedRequest;
   }
 
   /**
