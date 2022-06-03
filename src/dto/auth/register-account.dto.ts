@@ -23,7 +23,6 @@ export class RegisterAccountDto {
   @MinLength(5)
   public fullName: string;
 
-  @IsUrl()
   @IsOptional()
   public imageUrl?: string;
 }
