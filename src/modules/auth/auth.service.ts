@@ -26,7 +26,7 @@ export class AuthService {
    */
   public async registerAccount(
     registerAccountDto: RegisterAccountDto,
-  ): Promise<Credentials> {
+  ): Promise<Account> {
     // Checking for duplicate accounts under the same email address.
     const checkEmailCredentials = await this.credentialsService.getCredential({
       emailAddress: registerAccountDto.email,
@@ -56,7 +56,6 @@ export class AuthService {
     const firebaseUser = await this.firebaseService.firebaseAuth.createUser({
       email: registerAccountDto.email,
       displayName: registerAccountDto.fullName,
-      photoURL: registerAccountDto.imageUrl,
     });
 
     // Hashing the password.
@@ -76,8 +75,12 @@ export class AuthService {
       },
     });
 
+    const newAccount = await this.accountService.getUser({
+      credentialsId: savedCredentials.id,
+    });
+
     // Return credentials.
-    return savedCredentials;
+    return newAccount;
   }
 
   /**

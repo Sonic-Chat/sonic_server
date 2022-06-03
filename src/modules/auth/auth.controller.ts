@@ -32,7 +32,7 @@ export class AuthController {
   @Post('credential')
   public async registerAccount(
     @Body() registerAccountDto: RegisterAccountDto,
-  ): Promise<Credentials> {
+  ): Promise<Account> {
     return await this.authService.registerAccount(registerAccountDto);
   }
 
