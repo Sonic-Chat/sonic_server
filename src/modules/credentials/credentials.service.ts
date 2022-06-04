@@ -1,7 +1,13 @@
+import { CommonError } from './../../enum/error-codes/common/common-error.enum';
 import { PrismaService } from './../prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Account, Credentials, Prisma } from '@prisma/client';
 import { FirebaseService } from '../firebase/firebase.service';
+import { UpdateCredentialsDto } from 'src/dto/credentials/update-credentials.dto';
+import * as bcrypt from 'bcrypt';
+import { AuthError } from 'src/enum/error-codes/auth/auth-error.enum';
+import { AuthService } from '../auth/auth.service';
+import { LoginAccountDto } from 'src/dto/auth/login-account.dto';
 
 /**
  * Service Implementation for Credentials Module.
@@ -48,6 +54,18 @@ export class CredentialsService {
   }
 
   /**
+   * Service Implementation for updating of credentials.
+   * @param args Update Credentials Args.
+   * @returns Credentials Object.
+   */
+  public async updateCredential(
+    args: Prisma.CredentialsUpdateArgs,
+  ): Promise<Credentials> {
+    // Pass the parameters and return the result.
+    return await this.prismaService.credentials.update(args);
+  }
+
+  /**
    * Service Implementation for deleting credentials and all user generated content.
    * @param where Query Parameters to delete corresponding Credentials Object.
    * @returns Credentials object.
@@ -85,6 +103,97 @@ export class CredentialsService {
 
     // Delete Firebase Account.
     await this.firebaseService.firebaseAuth.deleteUser(where.firebaseId);
+  }
+
+  /**
+   * Service Implementation for credentials update.
+   * @param args Update Credentials Args.
+   * @returns Credentials Object.
+   */
+  public async updateCredentialsRequest(
+    loggedInUser: Credentials,
+    updateCredentialsDto: UpdateCredentialsDto,
+  ): Promise<{ token: string }> {
+    if (updateCredentialsDto.email && updateCredentialsDto.password) {
+      // Compare if the passwords match.
+      const passwordMatch = await bcrypt.compare(
+        updateCredentialsDto.password!,
+        loggedInUser.password,
+      );
+
+      // If passwords don't match, throw an HTTP Exception.
+      if (!passwordMatch) {
+        throw new BadRequestException({
+          message: AuthError.WRONG_PASSWORD,
+        });
+      }
+
+      // Update Credentials Object.
+      await this.updateCredential({
+        where: {
+          id: loggedInUser.id,
+        },
+        data: {
+          emailAddress: updateCredentialsDto.email!,
+        },
+      });
+
+      // Update Firebase Email Address.
+      await this.firebaseService.firebaseAuth.updateUser(
+        loggedInUser.firebaseId,
+        {
+          email: updateCredentialsDto.email,
+        },
+      );
+
+      // Return new authentication token.
+      return await this.generateCustomToken({
+        username: loggedInUser.username,
+        password: updateCredentialsDto.password,
+      });
+    } else if (
+      updateCredentialsDto.oldPassword &&
+      updateCredentialsDto.newPassword
+    ) {
+      // Compare if the passwords match.
+      const passwordMatch = await bcrypt.compare(
+        updateCredentialsDto.oldPassword!,
+        loggedInUser.password,
+      );
+
+      // If passwords don't match, throw an HTTP Exception.
+      if (!passwordMatch) {
+        throw new BadRequestException({
+          message: AuthError.WRONG_PASSWORD,
+        });
+      }
+
+      // Hashing the new password.
+      const passwordHash = await bcrypt.hash(
+        updateCredentialsDto.newPassword!,
+        10,
+      );
+
+      // Update Credentials Object.
+      await this.updateCredential({
+        where: {
+          id: loggedInUser.id,
+        },
+        data: {
+          password: passwordHash,
+        },
+      });
+
+      // Return new authentication token.
+      return await this.generateCustomToken({
+        username: loggedInUser.username,
+        password: updateCredentialsDto.newPassword,
+      });
+    } else {
+      throw new BadRequestException({
+        message: CommonError.ILLEGAL_ACTION,
+      });
+    }
   }
 
   /**
@@ -187,5 +296,48 @@ export class CredentialsService {
 
     // Return transaction array.
     return transactionArray;
+  }
+
+  /**
+   * Service Implementation for user account login through Firebase custom token generation.
+   * @param loginAccountDto DTO Object for logging into account.
+   * @returns Object containing auth token.
+   */
+  private async generateCustomToken(
+    loginAccountDto: LoginAccountDto,
+  ): Promise<{ token: string }> {
+    // Fetch crednetials from the database.
+    const credentials = await this.getCredential({
+      username: loginAccountDto.username,
+    });
+
+    // Check if credentials exist in the database else throw an HTTP Exception.
+    if (!credentials) {
+      throw new BadRequestException({
+        message: AuthError.ACCOUNT_DOES_NOT_EXIST,
+      });
+    }
+
+    // Compare if the passwords match.
+    const passwordMatch = await bcrypt.compare(
+      loginAccountDto.password,
+      credentials.password,
+    );
+
+    // If passwords don't match, throw an HTTP Exception.
+    if (!passwordMatch) {
+      throw new BadRequestException({
+        message: AuthError.WRONG_PASSWORD,
+      });
+    }
+
+    // Generate a custom firebase token for the client to log in.
+    const firebaseToken =
+      await this.firebaseService.firebaseAuth.createCustomToken(
+        credentials.firebaseId,
+      );
+
+    // Return the token as an object.
+    return { token: firebaseToken };
   }
 }
