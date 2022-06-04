@@ -1,6 +1,6 @@
 import { PrismaService } from './../prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { Credentials, Prisma } from '@prisma/client';
+import { Account, Credentials, Prisma } from '@prisma/client';
 import { FirebaseService } from '../firebase/firebase.service';
 
 /**
@@ -48,7 +48,7 @@ export class CredentialsService {
   }
 
   /**
-   * Service Implementation for deleting credentials.
+   * Service Implementation for deleting credentials and all user generated content.
    * @param where Query Parameters to delete corresponding Credentials Object.
    * @returns Credentials object.
    */
@@ -58,17 +58,134 @@ export class CredentialsService {
     // Fetching credentials record.
     const credentials = await this.getCredential(where);
 
-    // Delete Firebase Account.
-    await this.firebaseService.firebaseAuth.deleteUser(where.firebaseId);
+    // Fetching account record.
+    const account = await this.prismaService.account.findUnique({
+      where: {
+        credentialsId: credentials.id,
+      },
+    });
 
-    // Executing a transaction deleting the user account as well as credentials.
+    // Build deletion transaction array.
+    const transactions = await this.buildTransaction(account, credentials);
+
+    // Executing a transaction deleting the all user generated content.
     await this.prismaService.$transaction([
+      ...transactions,
       this.prismaService.account.delete({
-        where: { credentialsId: credentials.id },
+        where: {
+          credentialsId: credentials.id,
+        },
       }),
       this.prismaService.credentials.delete({
-        where,
+        where: {
+          id: credentials.id,
+        },
       }),
     ]);
+
+    // Delete Firebase Account.
+    await this.firebaseService.firebaseAuth.deleteUser(where.firebaseId);
+  }
+
+  /**
+   * Service Implementation for building deletion transaction array.
+   * @param account Account Model.
+   * @param credentials Credentials Model.
+   * @returns Transactions Array.
+   */
+  private async buildTransaction(
+    account: Account,
+    credentials: Credentials,
+  ): Promise<any[]> {
+    const transactionArray = [];
+    // Check for message record existence.
+    if (
+      (
+        await this.prismaService.message.findMany({
+          where: { sentBy: { id: account.id } },
+        })
+      ).length > 0
+    ) {
+      transactionArray.push(
+        this.prismaService.message.deleteMany({
+          where: {
+            sentBy: {
+              id: account.id,
+            },
+          },
+        }),
+      );
+    }
+    // Check for chat record existence.
+    if (
+      (
+        await this.prismaService.chat.findMany({
+          where: {
+            participants: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+        })
+      ).length > 0
+    ) {
+      transactionArray.push(
+        this.prismaService.chat.deleteMany({
+          where: {
+            participants: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+        }),
+      );
+    }
+    // Check for friend record existence.
+    if (
+      (
+        await this.prismaService.friends.findMany({
+          where: {
+            accounts: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+        })
+      ).length > 0
+    ) {
+      transactionArray.push(
+        this.prismaService.friends.deleteMany({
+          where: {
+            accounts: {
+              some: {
+                id: account.id,
+              },
+            },
+          },
+        }),
+      );
+    }
+    // Check for token record existence.
+    if (
+      await this.prismaService.token.findUnique({
+        where: {
+          credentialsId: credentials.id,
+        },
+      })
+    ) {
+      transactionArray.push(
+        this.prismaService.token.delete({
+          where: {
+            credentialsId: credentials.id,
+          },
+        }),
+      );
+    }
+
+    // Return transaction array.
+    return transactionArray;
   }
 }
