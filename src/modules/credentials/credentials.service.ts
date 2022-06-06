@@ -128,6 +128,18 @@ export class CredentialsService {
         });
       }
 
+      // Check if email address already is linked to another account.
+      const emailCheck = await this.getCredential({
+        emailAddress: updateCredentialsDto.email!,
+      });
+
+      // Throw an error if it already exists.
+      if (emailCheck) {
+        throw new BadRequestException({
+          message: AuthError.ACCOUNT_ALREADY_EXISTS_FOR_EMAIL,
+        });
+      }
+
       // Update Credentials Object.
       await this.updateCredential({
         where: {
