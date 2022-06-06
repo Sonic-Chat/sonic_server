@@ -1,3 +1,4 @@
+import { DeleteCredentialsDto } from './../../dto/credentials/delete-credentials.dto';
 import { CommonError } from './../../enum/error-codes/common/common-error.enum';
 import { PrismaService } from './../prisma/prisma.service';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -68,9 +69,11 @@ export class CredentialsService {
   /**
    * Service Implementation for deleting credentials and all user generated content.
    * @param where Query Parameters to delete corresponding Credentials Object.
+   * @param deleteCredentialsDto DTO Implementation for user account deletion.
    * @returns Credentials object.
    */
   public async deleteCredential(
+    deleteCredentialsDto: DeleteCredentialsDto,
     where: Prisma.CredentialsWhereUniqueInput,
   ): Promise<void> {
     // Fetching credentials record.
@@ -82,6 +85,19 @@ export class CredentialsService {
         credentialsId: credentials.id,
       },
     });
+
+    // Compare if the passwords match.
+    const passwordMatch = await bcrypt.compare(
+      deleteCredentialsDto.password,
+      credentials.password,
+    );
+
+    // If passwords don't match, throw an HTTP Exception.
+    if (!passwordMatch) {
+      throw new BadRequestException({
+        message: AuthError.WRONG_PASSWORD,
+      });
+    }
 
     // Build deletion transaction array.
     const transactions = await this.buildTransaction(account, credentials);

@@ -1,3 +1,4 @@
+import { DeleteCredentialsDto } from './../../dto/credentials/delete-credentials.dto';
 import { CredentialsService } from './../credentials/credentials.service';
 import { UpdateAccountDto } from './../../dto/user-account/update-account.dto';
 import { Body, Controller, Delete, Put, UseGuards } from '@nestjs/common';
@@ -43,12 +44,19 @@ export class AccountController {
   /**
    * Controller Implementation for user account deletion.
    * @param user Logged In User Details
+   * @param deleteCredentialsDto DTO Implementation for user account deletion.
    */
   @Delete()
   @UseGuards(AuthGuard)
-  public async deleteAccount(@User() user: Credentials): Promise<void> {
-    return await this.credentialsService.deleteCredential({
-      firebaseId: user.firebaseId,
-    });
+  public async deleteAccount(
+    @User() user: Credentials,
+    @Body() deleteCredentialsDto: DeleteCredentialsDto,
+  ): Promise<void> {
+    return await this.credentialsService.deleteCredential(
+      deleteCredentialsDto,
+      {
+        firebaseId: user.firebaseId,
+      },
+    );
   }
 }
