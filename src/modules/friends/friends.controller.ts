@@ -45,7 +45,9 @@ export class FriendsController {
   ): Promise<Friends[] | null> {
     // Fetching logged in user account details.
     const account = await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
 
     // Fetching requests from database.
@@ -84,7 +86,9 @@ export class FriendsController {
   ): Promise<Friends | null> {
     // Fetching logged in user account details.
     const account = await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
 
     // Fetching request from database.

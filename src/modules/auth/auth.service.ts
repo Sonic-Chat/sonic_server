@@ -76,7 +76,9 @@ export class AuthService {
     });
 
     const newAccount = await this.accountService.getUser({
-      credentialsId: savedCredentials.id,
+      where: {
+        credentialsId: savedCredentials.id,
+      },
     });
 
     // Return credentials.
@@ -134,7 +136,9 @@ export class AuthService {
   public async getUser(user: Credentials): Promise<Account> {
     // Return corresponding account object to client.
     return await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
   }
 }
