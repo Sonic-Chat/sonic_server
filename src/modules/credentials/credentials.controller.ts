@@ -1,10 +1,22 @@
+import { CredentialsError } from './../../enum/error-codes/credentials/credentials-error.enum';
 import { UpdateCredentialsDto } from 'src/dto/credentials/update-credentials.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
-import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { User } from 'src/decorators/user.decorator';
 import { Credentials } from '@prisma/client';
 import { CredentialsService } from './credentials.service';
 import { PublicCredentials } from 'src/dto/credentials/public-credentials.dto';
+import { FetchCredentialsDto } from 'src/dto/credentials/fetch-credentials.dto';
+import { AccountService } from '../account/account.service';
 
 /**
  * Service Implementation for Credentials Module.
@@ -12,7 +24,41 @@ import { PublicCredentials } from 'src/dto/credentials/public-credentials.dto';
 @Controller('v1/credentials')
 @UseGuards(AuthGuard)
 export class CredentialsController {
-  constructor(private readonly credentialsService: CredentialsService) {}
+  constructor(
+    private readonly credentialsService: CredentialsService,
+    private readonly accountService: AccountService,
+  ) {}
+
+  /**
+   * Controller Implementation for fetching user.
+   * @param fetchCredentialsDto DTO Implementation for fetching user.
+   * @returns Public Credentials.
+   */
+  @Get()
+  public async fetchCredentials(
+    @Query() fetchCredentialsDto: FetchCredentialsDto,
+  ): Promise<PublicCredentials> {
+    // Fetch user details.
+    const credentials = await this.credentialsService.getCredential({
+      id: (
+        await this.accountService.getUser({
+          where: {
+            id: fetchCredentialsDto.accountId,
+          },
+        })
+      ).credentialsId,
+    });
+
+    // If credentials not found, send error.
+    if (!credentials) {
+      throw new NotFoundException({
+        message: CredentialsError.CREDENTIALS_NOT_FOUND,
+      });
+    }
+
+    // Return result.
+    return PublicCredentials.toDto(credentials);
+  }
 
   /**
    * Controller Implementation for searching users.
@@ -21,7 +67,7 @@ export class CredentialsController {
    * @returns User Search Results.
    */
   @Get('filter/:search')
-  public async searchUsers(
+  public async searchCredentials(
     @User() user: Credentials,
     @Param('search') search: string,
   ): Promise<PublicCredentials[]> {
