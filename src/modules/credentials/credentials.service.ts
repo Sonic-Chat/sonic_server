@@ -43,6 +43,18 @@ export class CredentialsService {
   }
 
   /**
+   * Service Implementation for fetching multiple credentials.
+   * @param args Arguments to fetch corresponding multiple Credentials Objects.
+   * @returns Credentials array.
+   */
+  public async getCredentials(
+    args: Prisma.CredentialsFindManyArgs,
+  ): Promise<Credentials[]> {
+    // Pass the parameters and return the result.
+    return await this.prismaService.credentials.findMany(args);
+  }
+
+  /**
    * Service Implementation for creation of credentials.
    * @param data Parameters to create Credentials object.
    * @returns Credentials Object.
