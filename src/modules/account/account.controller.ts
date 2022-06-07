@@ -11,6 +11,7 @@ import { User } from 'src/decorators/user.decorator';
  * Controller Implementation for User Account Module.
  */
 @Controller('v1/account')
+@UseGuards(AuthGuard)
 export class AccountController {
   constructor(
     private readonly accountService: AccountService,
@@ -24,7 +25,6 @@ export class AccountController {
    * @returns Update Account Details.
    */
   @Put()
-  @UseGuards(AuthGuard)
   public async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,
     @User() user: Credentials,
@@ -47,7 +47,6 @@ export class AccountController {
    * @param deleteCredentialsDto DTO Implementation for user account deletion.
    */
   @Delete()
-  @UseGuards(AuthGuard)
   public async deleteAccount(
     @User() user: Credentials,
     @Body() deleteCredentialsDto: DeleteCredentialsDto,
