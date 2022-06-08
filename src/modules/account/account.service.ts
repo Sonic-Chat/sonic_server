@@ -20,12 +20,10 @@ export class AccountService {
    * @returns Account object or null.
    */
   public async getUser(
-    where: Prisma.AccountWhereUniqueInput,
+    args: Prisma.AccountFindUniqueArgs,
   ): Promise<Account | null> {
     // Pass the query parameters to find a unique account and return it.
-    return await this.prismaService.account.findUnique({
-      where,
-    });
+    return await this.prismaService.account.findUnique(args);
   }
 
   /**

@@ -3,7 +3,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["referentialIntegrity"]
+  previewFeatures = ["referentialIntegrity", "fullTextSearch", "fullTextIndex"]
 }
 
 datasource db {
@@ -37,6 +37,7 @@ model Credentials {
   token Token?
 
   @@unique([id, firebaseId, emailAddress])
+  @@fulltext([username])
   @@map("credentials")
 }
 
@@ -57,6 +58,8 @@ model Account {
   messages Message[]
 
   chats Chat[] @relation("account_messages")
+
+  @@fulltext([fullName])
   @@map("accounts")
 }
 

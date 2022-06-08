@@ -103,12 +103,16 @@ export class FriendsService {
   ): Promise<Friends> {
     // Fetch account details for logged in user.
     const userAccount = await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
 
     // Fetch account details for specified user.
     const friendAccount = await this.accountService.getUser({
-      id: createRequestDto.userId,
+      where: {
+        id: createRequestDto.userId,
+      },
     });
 
     // If specified user account does not exist, throw an HTTP exception.
@@ -205,7 +209,9 @@ export class FriendsService {
 
     // Get logged in user details.
     const loggedInUser = await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
 
     // Get friend's account details.
@@ -287,7 +293,9 @@ export class FriendsService {
   ): Promise<Friends> {
     // Fetch logged in account details.
     const account = await this.accountService.getUser({
-      credentialsId: user.id,
+      where: {
+        credentialsId: user.id,
+      },
     });
 
     // Fetch the friend request data from database.
