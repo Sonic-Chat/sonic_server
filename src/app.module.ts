@@ -1,3 +1,4 @@
+import { SeedersModule } from './modules/seeders/seeders.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { CredentialsModule } from './modules/credentials/credentials.module';
@@ -23,6 +24,7 @@ const logger = new Logger('MikroORM');
     CredentialsModule,
     AccountModule,
     AuthModule,
+    SeedersModule,
     NotificationModule,
     FriendsModule,
     ChatModule,
