@@ -1,8 +1,7 @@
-import { FriendStatus } from '@prisma/client';
-import { IsIn, IsNotEmpty } from 'class-validator';
+import { IsIn, IsOptional } from 'class-validator';
 
 export class FetchRequestsDto {
-  @IsNotEmpty()
-  @IsIn(Object.values(FriendStatus))
-  public status: FriendStatus;
+  @IsOptional()
+  @IsIn(['REQUESTED', 'ACCEPTED', 'IGNORED', 'REQUESTED_TO_YOU'])
+  public status: string;
 }

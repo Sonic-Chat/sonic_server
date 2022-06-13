@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FriendsService } from './friends.service';
 import { User } from 'src/decorators/user.decorator';
-import { Credentials, Friends } from '@prisma/client';
+import { Credentials, Friends, FriendStatus } from '@prisma/client';
 import { UpdateRequestDto } from 'src/dto/friends/update-request.dto';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
 import { AccountService } from '../account/account.service';
@@ -50,26 +50,106 @@ export class FriendsController {
       },
     });
 
-    // Fetching requests from database.
-    return await this.friendsService.getFriendRequests({
-      where: {
-        AND: [
-          {
-            accounts: {
-              some: {
-                id: account.id,
+    if (fetchRequestsDto.status) {
+      if (fetchRequestsDto.status === 'REQUESTED_TO_YOU') {
+        const account = await this.accountService.getUser({
+          where: {
+            credentialsId: user.id,
+          },
+        });
+
+        return await this.friendsService.getFriendRequests({
+          where: {
+            requestedById: {
+              not: account.id,
+            },
+            AND: [
+              {
+                accounts: {
+                  some: {
+                    id: account.id,
+                  },
+                },
+              },
+              {
+                status: FriendStatus.REQUESTED,
+              },
+            ],
+          },
+          include: {
+            accounts: true,
+          },
+        });
+      }
+
+      if (fetchRequestsDto.status === 'REQUESTED') {
+        const account = await this.accountService.getUser({
+          where: {
+            credentialsId: user.id,
+          },
+        });
+
+        return await this.friendsService.getFriendRequests({
+          where: {
+            requestedById: account.id,
+            AND: [
+              {
+                accounts: {
+                  some: {
+                    id: account.id,
+                  },
+                },
+              },
+              {
+                status: {
+                  in: [FriendStatus.REQUESTED, FriendStatus.IGNORED],
+                },
+              },
+            ],
+          },
+          include: {
+            accounts: true,
+          },
+        });
+      }
+
+      // Fetching requests from database.
+      return await this.friendsService.getFriendRequests({
+        where: {
+          AND: [
+            {
+              accounts: {
+                some: {
+                  id: account.id,
+                },
               },
             },
+            {
+              status: this.friendsService.mapStringToFriendStatus(
+                fetchRequestsDto.status,
+              ),
+            },
+          ],
+        },
+        include: {
+          accounts: true,
+        },
+      });
+    }
+    // Fetching requests from database.
+    else
+      return await this.friendsService.getFriendRequests({
+        where: {
+          accounts: {
+            some: {
+              id: account.id,
+            },
           },
-          {
-            status: fetchRequestsDto.status,
-          },
-        ],
-      },
-      include: {
-        accounts: true,
-      },
-    });
+        },
+        include: {
+          accounts: true,
+        },
+      });
   }
 
   /**

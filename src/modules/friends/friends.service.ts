@@ -330,4 +330,21 @@ export class FriendsService {
       },
     });
   }
+
+  public mapStringToFriendStatus(status: string): FriendStatus {
+    switch (status) {
+      case 'REQUESTED': {
+        return FriendStatus.REQUESTED;
+      }
+      case 'ACCEPTED': {
+        return FriendStatus.ACCEPTED;
+      }
+      case 'IGNORED': {
+        return FriendStatus.IGNORED;
+      }
+      default: {
+        return FriendStatus.REQUESTED;
+      }
+    }
+  }
 }
