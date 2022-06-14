@@ -1,4 +1,8 @@
 import {
+  MarkSeenDto,
+  verifyDto as markSeenDtoVerify,
+} from './../../dto/chat/mark-seen.dto';
+import {
   DeleteMessageDto,
   verifyDto as deletemessageDtoVerify,
 } from './../../dto/chat/delete-message.dto';
@@ -318,6 +322,22 @@ export class MessageService {
       });
     }
 
+    // Set message as seen.
+    await this.chatService.updateChat({
+      where: {
+        id: chatModel.id,
+      },
+      data: {
+        seen: {
+          set: [
+            {
+              credentialsId: createMessageDto.user.id,
+            },
+          ],
+        },
+      },
+    });
+
     // If reciever is connected, send the message.
     if (reciever) {
       // Set message as delivered.
@@ -329,7 +349,7 @@ export class MessageService {
           delivered: {
             set: [
               {
-                credentialsId: createMessageDto.user.id,
+                id: reciever.user.id,
               },
             ],
           },
@@ -383,6 +403,70 @@ export class MessageService {
         },
       );
     }
+  }
+
+  /**
+   * Service Implementation for marking a chat seen.
+   * @param client Client Socket
+   * @param markSeenDto DTO Implementation for marking a chat seen.
+   */
+  public async markChatSeen(
+    client: Socket,
+    markSeenDto: MarkSeenDto,
+  ): Promise<void> {
+    // Validate the DTO object.
+    const errors = markSeenDtoVerify(markSeenDto);
+
+    // Send errors to client.
+    if (errors.length !== 0) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: errors,
+        }),
+      );
+
+      return;
+    }
+
+    // Validating chat ID.
+    const checkChat = await this.chatService.getChat({
+      where: {
+        id: markSeenDto.chatId,
+      },
+    });
+
+    // If chat does not exist, send error.
+    if (!checkChat) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: [ChatError.CHAT_UID_ILLEGAL],
+        }),
+      );
+
+      return;
+    }
+
+    // Mark user seen.
+    await this.chatService.updateChat({
+      where: {
+        id: markSeenDto.chatId,
+      },
+      data: {
+        seen: {
+          connect: [{ id: markSeenDto.user['account']['id'] }],
+        },
+      },
+    });
+
+    // Send confirmation.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: ['SEEN'],
+      }),
+    );
   }
 
   /**
