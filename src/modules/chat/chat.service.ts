@@ -40,4 +40,21 @@ export class ChatService {
   public async createChat(args: Prisma.ChatCreateArgs): Promise<Chat> {
     return await this.prismaService.chat.create(args);
   }
+
+  /**
+   * Service Implementation for updating chat.
+   * @param args Chat Update Arguments.
+   * @returns Updated Chat Object.
+   */
+  public async updateChat(args: Prisma.ChatUpdateArgs): Promise<Chat> {
+    return await this.prismaService.chat.update(args);
+  }
+
+  /**
+   * Service Implementation for updating many chat.
+   * @param args Chat Update Many Arguments.
+   */
+  public async updateChats(args: Prisma.ChatUpdateManyArgs): Promise<void> {
+    await this.prismaService.chat.updateMany(args);
+  }
 }

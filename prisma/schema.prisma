@@ -57,7 +57,9 @@ model Account {
 
   messages Message[]
 
-  chats Chat[] @relation("account_messages")
+  chats      Chat[] @relation("account_messages")
+  seens      Chat[] @relation("account_seen")
+  deliveries Chat[] @relation("account_delivery")
 
   @@fulltext([fullName])
   @@map("accounts")
@@ -85,6 +87,9 @@ model Chat {
 
   participants Account[] @relation("account_messages")
   messages     Message[]
+
+  seen      Account[] @relation("account_seen")
+  delivered Account[] @relation("account_delivery")
 
   @@map("chats")
 }

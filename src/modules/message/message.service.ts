@@ -1,4 +1,8 @@
 import {
+  MarkSeenDto,
+  verifyDto as markSeenDtoVerify,
+} from './../../dto/chat/mark-seen.dto';
+import {
   DeleteMessageDto,
   verifyDto as deletemessageDtoVerify,
 } from './../../dto/chat/delete-message.dto';
@@ -170,6 +174,35 @@ export class MessageService {
           },
         },
       },
+    });
+
+    // Update delivered status.
+    for (const chatModel of chatModels) {
+      await this.chatService.updateChat({
+        where: {
+          id: chatModel.id,
+        },
+        data: {
+          delivered: {
+            connect: [
+              {
+                id: user['user']['account']['id'],
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    // Fetch updated chat models.
+    const updatedChatModels = await this.chatService.getChats({
+      where: {
+        participants: {
+          some: {
+            credentialsId: user.id,
+          },
+        },
+      },
       include: {
         messages: {
           include: {
@@ -178,6 +211,8 @@ export class MessageService {
             sentBy: true,
           },
         },
+        seen: true,
+        delivered: true,
         participants: true,
       },
     });
@@ -187,7 +222,7 @@ export class MessageService {
       JSON.stringify({
         type: 'sync-chat',
         details: {
-          chats: chatModels,
+          chats: updatedChatModels,
         },
       }),
     );
@@ -287,8 +322,40 @@ export class MessageService {
       });
     }
 
+    // Set message as seen.
+    await this.chatService.updateChat({
+      where: {
+        id: chatModel.id,
+      },
+      data: {
+        seen: {
+          set: [
+            {
+              credentialsId: createMessageDto.user.id,
+            },
+          ],
+        },
+      },
+    });
+
     // If reciever is connected, send the message.
     if (reciever) {
+      // Set message as delivered.
+      await this.chatService.updateChat({
+        where: {
+          id: chatModel.id,
+        },
+        data: {
+          delivered: {
+            connect: [
+              {
+                id: reciever.user.id,
+              },
+            ],
+          },
+        },
+      });
+
       reciever.socket.send(
         JSON.stringify({
           type: 'create-message',
@@ -336,6 +403,70 @@ export class MessageService {
         },
       );
     }
+  }
+
+  /**
+   * Service Implementation for marking a chat seen.
+   * @param client Client Socket
+   * @param markSeenDto DTO Implementation for marking a chat seen.
+   */
+  public async markChatSeen(
+    client: Socket,
+    markSeenDto: MarkSeenDto,
+  ): Promise<void> {
+    // Validate the DTO object.
+    const errors = markSeenDtoVerify(markSeenDto);
+
+    // Send errors to client.
+    if (errors.length !== 0) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: errors,
+        }),
+      );
+
+      return;
+    }
+
+    // Validating chat ID.
+    const checkChat = await this.chatService.getChat({
+      where: {
+        id: markSeenDto.chatId,
+      },
+    });
+
+    // If chat does not exist, send error.
+    if (!checkChat) {
+      client.send(
+        JSON.stringify({
+          type: 'error',
+          errors: [ChatError.CHAT_UID_ILLEGAL],
+        }),
+      );
+
+      return;
+    }
+
+    // Mark user seen.
+    await this.chatService.updateChat({
+      where: {
+        id: markSeenDto.chatId,
+      },
+      data: {
+        seen: {
+          connect: [{ id: markSeenDto.user['account']['id'] }],
+        },
+      },
+    });
+
+    // Send confirmation.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: ['SEEN'],
+      }),
+    );
   }
 
   /**

@@ -1,3 +1,4 @@
+import { MarkSeenDto } from './../../dto/chat/mark-seen.dto';
 import { DeleteMessageDto } from './../../dto/chat/delete-message.dto';
 import { UpdateMessageDto } from './../../dto/chat/update-message.dto';
 import { CreateMessageDto } from 'src/dto/chat/create-message.dto';
@@ -71,6 +72,20 @@ export class MessageGateway {
     @MessageBody() createMessageDto: CreateMessageDto,
   ): Promise<void> {
     return this.messageService.sendMessage(client, createMessageDto);
+  }
+
+  /**
+   * Controller Implementation for marking a chat seen.
+   * @param markSeenDto DTO Implementation for marking a chat seen.
+   * @param client Client Socket Object
+   */
+  @SubscribeMessage('mark-seen')
+  @UseGuards(WSAuthGuard)
+  public async markChatSeen(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() markSeenDto: MarkSeenDto,
+  ): Promise<void> {
+    return this.messageService.markChatSeen(client, markSeenDto);
   }
 
   /**
