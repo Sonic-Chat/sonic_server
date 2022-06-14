@@ -172,7 +172,7 @@ export class MessageService {
       },
     });
 
-    // Update delivered status
+    // Update delivered status.
     for (const chatModel of chatModels) {
       await this.chatService.updateChat({
         where: {
@@ -190,6 +190,7 @@ export class MessageService {
       });
     }
 
+    // Fetch updated chat models.
     const updatedChatModels = await this.chatService.getChats({
       where: {
         participants: {
@@ -317,23 +318,24 @@ export class MessageService {
       });
     }
 
-    await this.chatService.updateChat({
-      where: {
-        id: chatModel.id,
-      },
-      data: {
-        delivered: {
-          set: [
-            {
-              credentialsId: createMessageDto.user.id,
-            },
-          ],
-        },
-      },
-    });
-
     // If reciever is connected, send the message.
     if (reciever) {
+      // Set message as delivered.
+      await this.chatService.updateChat({
+        where: {
+          id: chatModel.id,
+        },
+        data: {
+          delivered: {
+            set: [
+              {
+                credentialsId: createMessageDto.user.id,
+              },
+            ],
+          },
+        },
+      });
+
       reciever.socket.send(
         JSON.stringify({
           type: 'create-message',
@@ -343,21 +345,6 @@ export class MessageService {
           },
         }),
       );
-
-      await this.chatService.updateChat({
-        where: {
-          id: chatModel.id,
-        },
-        data: {
-          seen: {
-            connect: [
-              {
-                credentialsId: createMessageDto.user.id,
-              },
-            ],
-          },
-        },
-      });
     } else {
       let body = '';
 
