@@ -170,6 +170,34 @@ export class MessageService {
           },
         },
       },
+    });
+
+    // Update seen status
+    for (const chatModel of chatModels) {
+      await this.chatService.updateChat({
+        where: {
+          id: chatModel.id,
+        },
+        data: {
+          seen: {
+            connect: [
+              {
+                id: user['user']['account']['id'],
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    const updatedChatModels = await this.chatService.getChats({
+      where: {
+        participants: {
+          some: {
+            credentialsId: user.id,
+          },
+        },
+      },
       include: {
         messages: {
           include: {
@@ -188,7 +216,7 @@ export class MessageService {
       JSON.stringify({
         type: 'sync-chat',
         details: {
-          chats: chatModels,
+          chats: updatedChatModels,
         },
       }),
     );
@@ -314,6 +342,21 @@ export class MessageService {
           },
         }),
       );
+
+      await this.chatService.updateChat({
+        where: {
+          id: chatModel.id,
+        },
+        data: {
+          seen: {
+            connect: [
+              {
+                credentialsId: createMessageDto.user.id,
+              },
+            ],
+          },
+        },
+      });
     } else {
       let body = '';
 
