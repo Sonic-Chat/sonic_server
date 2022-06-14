@@ -347,7 +347,7 @@ export class MessageService {
         },
         data: {
           delivered: {
-            set: [
+            connect: [
               {
                 id: reciever.user.id,
               },
