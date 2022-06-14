@@ -178,6 +178,7 @@ export class MessageService {
             sentBy: true,
           },
         },
+        seen: true,
         participants: true,
       },
     });
@@ -286,6 +287,21 @@ export class MessageService {
         },
       });
     }
+
+    await this.chatService.updateChat({
+      where: {
+        id: chatModel.id,
+      },
+      data: {
+        seen: {
+          set: [
+            {
+              credentialsId: createMessageDto.user.id,
+            },
+          ],
+        },
+      },
+    });
 
     // If reciever is connected, send the message.
     if (reciever) {
