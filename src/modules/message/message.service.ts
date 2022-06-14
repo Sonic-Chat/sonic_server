@@ -172,14 +172,14 @@ export class MessageService {
       },
     });
 
-    // Update seen status
+    // Update delivered status
     for (const chatModel of chatModels) {
       await this.chatService.updateChat({
         where: {
           id: chatModel.id,
         },
         data: {
-          seen: {
+          delivered: {
             connect: [
               {
                 id: user['user']['account']['id'],
@@ -207,6 +207,7 @@ export class MessageService {
           },
         },
         seen: true,
+        delivered: true,
         participants: true,
       },
     });
@@ -321,7 +322,7 @@ export class MessageService {
         id: chatModel.id,
       },
       data: {
-        seen: {
+        delivered: {
           set: [
             {
               credentialsId: createMessageDto.user.id,
