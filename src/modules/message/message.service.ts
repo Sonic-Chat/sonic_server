@@ -403,6 +403,17 @@ export class MessageService {
         },
       );
     }
+
+    // Send create message event to the sender too.
+    client.send(
+      JSON.stringify({
+        type: 'create-message',
+        details: {
+          chatId: createMessageDto.chatId,
+          message: messageDto,
+        },
+      }),
+    );
   }
 
   /**
