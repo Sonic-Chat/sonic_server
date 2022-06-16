@@ -277,7 +277,7 @@ export class MessageService {
 
     // Save message to database.
     if (createMessageDto.type.includes('IMAGE')) {
-      messageDto = await this.createMessageModel({
+      const newMessage = await this.createMessageModel({
         data: {
           type: Object.values(MessageType).find(
             (type) => type === createMessageDto.type,
@@ -301,8 +301,18 @@ export class MessageService {
           },
         },
       });
+
+      messageDto = await this.getMessageModel({
+        where: {
+          id: newMessage.id,
+        },
+        include: {
+          sentBy: true,
+          image: true,
+        },
+      });
     } else {
-      messageDto = await this.createMessageModel({
+      const newMessage = await this.createMessageModel({
         data: {
           type: Object.values(MessageType).find(
             (type) => type === createMessageDto.type,
@@ -318,6 +328,16 @@ export class MessageService {
               id: chatModel.id,
             },
           },
+        },
+      });
+
+      messageDto = await this.getMessageModel({
+        where: {
+          id: newMessage.id,
+        },
+        include: {
+          sentBy: true,
+          image: true,
         },
       });
     }
