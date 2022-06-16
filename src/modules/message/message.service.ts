@@ -660,5 +660,16 @@ export class MessageService {
         }),
       );
     }
+
+    // Send the delete message event to the client too.
+    client.send(
+      JSON.stringify({
+        type: 'delete-message',
+        details: {
+          chatId: chatModel.id,
+          messageId: deleteMessageDto.messageId,
+        },
+      }),
+    );
   }
 }
