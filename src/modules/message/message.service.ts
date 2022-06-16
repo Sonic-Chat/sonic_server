@@ -445,6 +445,9 @@ export class MessageService {
       where: {
         id: markSeenDto.chatId,
       },
+      include: {
+        participants: true,
+      },
     });
 
     // If chat does not exist, send error.
@@ -458,6 +461,17 @@ export class MessageService {
 
       return;
     }
+
+    // Filter out the reciever ID.
+    const recieverId = checkChat['participants'].filter(
+      (participant: Account) =>
+        participant.id !== markSeenDto.user['account']['id'],
+    )[0].id;
+
+    // Filter the connected user if present.
+    const reciever = this.connectedUsers.find(
+      (user) => user.user.id === recieverId,
+    );
 
     // Mark user seen.
     await this.chatService.updateChat({
@@ -478,6 +492,18 @@ export class MessageService {
         message: ['SEEN'],
       }),
     );
+
+    // If reciepient is online, send the mark seen event.
+    if (reciever) {
+      reciever.socket.send(
+        JSON.stringify({
+          type: 'mark-seen',
+          details: {
+            chatId: markSeenDto.chatId,
+          },
+        }),
+      );
+    }
   }
 
   /**
