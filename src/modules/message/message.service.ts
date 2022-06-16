@@ -600,12 +600,22 @@ export class MessageService {
     );
 
     // Update Message in Database.
-    const messageDto = await this.updateMessageModel({
+    const updatedMessage = await this.updateMessageModel({
       where: {
         id: updateMessageDto.messageId,
       },
       data: {
         message: updateMessageDto.message,
+      },
+    });
+
+    const messageDto = await this.getMessageModel({
+      where: {
+        id: updatedMessage.id,
+      },
+      include: {
+        sentBy: true,
+        image: true,
       },
     });
 
