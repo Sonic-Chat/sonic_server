@@ -565,6 +565,17 @@ export class MessageService {
         }),
       );
     }
+
+    // Send the update message event to the client.
+    client.send(
+      JSON.stringify({
+        type: 'update-message',
+        details: {
+          chatId: chatModel.id,
+          message: messageDto,
+        },
+      }),
+    );
   }
 
   /**
