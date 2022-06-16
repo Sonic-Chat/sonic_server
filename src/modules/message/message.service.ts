@@ -365,6 +365,16 @@ export class MessageService {
           },
         }),
       );
+
+      // Send the delivery event to the client.
+      client.send(
+        JSON.stringify({
+          type: 'mark-delivered',
+          details: {
+            chatId: createMessageDto.chatId,
+          },
+        }),
+      );
     } else {
       let body = '';
 
