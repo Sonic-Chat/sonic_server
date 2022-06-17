@@ -11,7 +11,7 @@ import {
   verifyDto as updateMessageDtoVerify,
 } from './../../dto/chat/update-message.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   Account,
   Credentials,
@@ -38,6 +38,7 @@ import { NotificationService } from '../notification/notification.service';
 @Injectable()
 export class MessageService {
   private connectedUsers: { user: Account; socket: Socket }[] = [];
+  private readonly logger = new Logger(MessageService.name);
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -143,6 +144,8 @@ export class MessageService {
         message: ['CONNECTED'],
       }),
     );
+
+    this.logger.log(`User ${connectServerDto.user.id} connected`);
   }
 
   /**
@@ -150,9 +153,15 @@ export class MessageService {
    * @param socket Logged In User Socket.
    */
   public async disonnectUser(socket: Socket): Promise<void> {
+    const disconnectedUser = this.connectedUsers.find(
+      (connectedUser) => connectedUser.socket === socket,
+    );
+
     this.connectedUsers = this.connectedUsers.filter(
       (connectedUser) => connectedUser.socket !== socket,
     );
+
+    this.logger.log(`User ${disconnectedUser.user.id} disconnected`);
   }
 
   /**
