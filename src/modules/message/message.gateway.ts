@@ -6,6 +6,7 @@ import { ConnectServerDto } from './../../dto/chat/connect-server.dto';
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
@@ -19,7 +20,7 @@ import { Credentials } from '@prisma/client';
  * Controller Implementation for Chat Message Module.
  */
 @WebSocketGateway()
-export class MessageGateway {
+export class MessageGateway implements OnGatewayDisconnect {
   constructor(private readonly messageService: MessageService) {}
 
   /**
@@ -36,14 +37,8 @@ export class MessageGateway {
     return this.messageService.addConnectedUser(connectServerDto, client);
   }
 
-  /**
-   * Controller Implementation for disconnecting from server.
-   * @param user Logged In User
-   */
-  @SubscribeMessage('disconnect')
-  @UseGuards(WSAuthGuard)
-  public async disconnectUser(@MessageBody() user: any): Promise<void> {
-    return this.messageService.disonnectUser(user.user);
+  handleDisconnect(client: Socket) {
+    return this.messageService.disonnectUser(client);
   }
 
   /**

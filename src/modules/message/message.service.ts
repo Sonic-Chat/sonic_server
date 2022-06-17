@@ -125,14 +125,10 @@ export class MessageService {
     );
 
     if (checkUser) {
-      client.send(
-        JSON.stringify({
-          type: 'error',
-          errors: [ChatError.ILLEGAL_ACTION],
-        }),
+      this.connectedUsers = this.connectedUsers.filter(
+        (connectedUser) =>
+          connectedUser.user.id !== connectServerDto.user['account']['id'],
       );
-
-      return;
     }
 
     // Persist the connected user details.
@@ -151,11 +147,11 @@ export class MessageService {
 
   /**
    * Service Implementation for disconnecting server.
-   * @param user Logged In User.
+   * @param socket Logged In User Socket.
    */
-  public async disonnectUser(user: Credentials): Promise<void> {
+  public async disonnectUser(socket: Socket): Promise<void> {
     this.connectedUsers = this.connectedUsers.filter(
-      (connectedUser) => connectedUser.user.id !== user['account']['id'],
+      (connectedUser) => connectedUser.socket !== socket,
     );
   }
 
@@ -237,6 +233,8 @@ export class MessageService {
     client: Socket,
     createMessageDto: CreateMessageDto,
   ): Promise<void> {
+    console.log(this.connectedUsers);
+
     // Validate the DTO object.
     const errors = createMessageDtoVerify(createMessageDto);
 
@@ -395,7 +393,6 @@ export class MessageService {
           },
         }),
       );
-    } else {
       let body = '';
 
       // Body for the notification.
