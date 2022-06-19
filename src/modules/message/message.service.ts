@@ -141,7 +141,7 @@ export class MessageService {
     client.send(
       JSON.stringify({
         type: 'success',
-        message: ['CONNECTED'],
+        message: 'CONNECTED',
       }),
     );
 
@@ -525,7 +525,10 @@ export class MessageService {
     client.send(
       JSON.stringify({
         type: 'success',
-        message: ['SEEN'],
+        message: 'SEEN',
+        details: {
+          chatId: markSeenDto.chatId,
+        },
       }),
     );
 
