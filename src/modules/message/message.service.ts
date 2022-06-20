@@ -352,6 +352,18 @@ export class MessageService {
       });
     }
 
+    // Send confirmation to sender.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_SENT',
+        details: {
+          chatId: createMessageDto.chatId,
+          message: messageDto,
+        },
+      }),
+    );
+
     // Set message as seen.
     await this.chatService.updateChat({
       where: {
@@ -442,18 +454,6 @@ export class MessageService {
         },
       );
     }
-
-    // Send confirmation to sender.
-    client.send(
-      JSON.stringify({
-        type: 'success',
-        message: 'MESSAGE_SENT',
-        details: {
-          chatId: createMessageDto.chatId,
-          message: messageDto,
-        },
-      }),
-    );
   }
 
   /**
