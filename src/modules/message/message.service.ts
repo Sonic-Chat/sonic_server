@@ -142,6 +142,9 @@ export class MessageService {
       JSON.stringify({
         type: 'success',
         message: 'CONNECTED',
+        details: {
+          id: connectServerDto.user.id,
+        },
       }),
     );
 
@@ -440,10 +443,11 @@ export class MessageService {
       );
     }
 
-    // Send create message event to the sender too.
+    // Send confirmation to sender.
     client.send(
       JSON.stringify({
-        type: 'create-message',
+        type: 'success',
+        message: 'MESSAGE_SENT',
         details: {
           chatId: createMessageDto.chatId,
           message: messageDto,
@@ -521,7 +525,7 @@ export class MessageService {
       },
     });
 
-    // Send confirmation.
+    // Send confirmation to the client.
     client.send(
       JSON.stringify({
         type: 'success',
@@ -641,10 +645,11 @@ export class MessageService {
       );
     }
 
-    // Send the update message event to the client.
+    // Send confirmation to the client.
     client.send(
       JSON.stringify({
-        type: 'update-message',
+        type: 'success',
+        message: 'MESSAGE_UPDATED',
         details: {
           chatId: chatModel.id,
           message: messageDto,
@@ -736,10 +741,11 @@ export class MessageService {
       );
     }
 
-    // Send the delete message event to the client too.
+    // Send the confirmation to the client.
     client.send(
       JSON.stringify({
-        type: 'delete-message',
+        type: 'success',
+        message: 'MESSAGE_DELETED',
         details: {
           chatId: chatModel.id,
           messageId: deleteMessageDto.messageId,
