@@ -11,7 +11,7 @@ import {
   verifyDto as updateMessageDtoVerify,
 } from './../../dto/chat/update-message.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   Account,
   Credentials,
@@ -38,6 +38,7 @@ import { NotificationService } from '../notification/notification.service';
 @Injectable()
 export class MessageService {
   private connectedUsers: { user: Account; socket: Socket }[] = [];
+  private readonly logger = new Logger(MessageService.name);
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -125,14 +126,10 @@ export class MessageService {
     );
 
     if (checkUser) {
-      client.send(
-        JSON.stringify({
-          type: 'error',
-          errors: [ChatError.ILLEGAL_ACTION],
-        }),
+      this.connectedUsers = this.connectedUsers.filter(
+        (connectedUser) =>
+          connectedUser.user.id !== connectServerDto.user['account']['id'],
       );
-
-      return;
     }
 
     // Persist the connected user details.
@@ -144,19 +141,30 @@ export class MessageService {
     client.send(
       JSON.stringify({
         type: 'success',
-        message: ['CONNECTED'],
+        message: 'CONNECTED',
+        details: {
+          id: connectServerDto.user.id,
+        },
       }),
     );
+
+    this.logger.log(`User ${connectServerDto.user.id} connected`);
   }
 
   /**
    * Service Implementation for disconnecting server.
-   * @param user Logged In User.
+   * @param socket Logged In User Socket.
    */
-  public async disonnectUser(user: Credentials): Promise<void> {
-    this.connectedUsers = this.connectedUsers.filter(
-      (connectedUser) => connectedUser.user.id !== user['account']['id'],
+  public async disonnectUser(socket: Socket): Promise<void> {
+    const disconnectedUser = this.connectedUsers.find(
+      (connectedUser) => connectedUser.socket === socket,
     );
+
+    this.connectedUsers = this.connectedUsers.filter(
+      (connectedUser) => connectedUser.socket !== socket,
+    );
+
+    this.logger.log(`User ${disconnectedUser.user.id} disconnected`);
   }
 
   /**
@@ -226,6 +234,28 @@ export class MessageService {
         },
       }),
     );
+
+    updatedChatModels.forEach((chat) => {
+      const friendAccount: Account = chat['participants'].filter(
+        (account: Account) => {
+          return account.credentialsId !== user['user']['id'];
+        },
+      )[0];
+
+      const socket = this.connectedUsers.find(
+        (user) => user.user.id === friendAccount.id,
+      );
+
+      if (socket)
+        socket.socket.send(
+          JSON.stringify({
+            type: 'mark-delivered',
+            details: {
+              chatId: chat.id,
+            },
+          }),
+        );
+    });
   }
 
   /**
@@ -277,7 +307,7 @@ export class MessageService {
 
     // Save message to database.
     if (createMessageDto.type.includes('IMAGE')) {
-      messageDto = await this.createMessageModel({
+      const newMessage = await this.createMessageModel({
         data: {
           type: Object.values(MessageType).find(
             (type) => type === createMessageDto.type,
@@ -301,8 +331,18 @@ export class MessageService {
           },
         },
       });
+
+      messageDto = await this.getMessageModel({
+        where: {
+          id: newMessage.id,
+        },
+        include: {
+          sentBy: true,
+          image: true,
+        },
+      });
     } else {
-      messageDto = await this.createMessageModel({
+      const newMessage = await this.createMessageModel({
         data: {
           type: Object.values(MessageType).find(
             (type) => type === createMessageDto.type,
@@ -320,7 +360,29 @@ export class MessageService {
           },
         },
       });
+
+      messageDto = await this.getMessageModel({
+        where: {
+          id: newMessage.id,
+        },
+        include: {
+          sentBy: true,
+          image: true,
+        },
+      });
     }
+
+    // Send confirmation to sender.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_SENT',
+        details: {
+          chatId: createMessageDto.chatId,
+          message: messageDto,
+        },
+      }),
+    );
 
     // Set message as seen.
     await this.chatService.updateChat({
@@ -365,7 +427,16 @@ export class MessageService {
           },
         }),
       );
-    } else {
+
+      // Send the delivery event to the client.
+      client.send(
+        JSON.stringify({
+          type: 'mark-delivered',
+          details: {
+            chatId: createMessageDto.chatId,
+          },
+        }),
+      );
       let body = '';
 
       // Body for the notification.
@@ -434,6 +505,9 @@ export class MessageService {
       where: {
         id: markSeenDto.chatId,
       },
+      include: {
+        participants: true,
+      },
     });
 
     // If chat does not exist, send error.
@@ -448,6 +522,17 @@ export class MessageService {
       return;
     }
 
+    // Filter out the reciever ID.
+    const recieverId = checkChat['participants'].filter(
+      (participant: Account) =>
+        participant.id !== markSeenDto.user['account']['id'],
+    )[0].id;
+
+    // Filter the connected user if present.
+    const reciever = this.connectedUsers.find(
+      (user) => user.user.id === recieverId,
+    );
+
     // Mark user seen.
     await this.chatService.updateChat({
       where: {
@@ -460,13 +545,28 @@ export class MessageService {
       },
     });
 
-    // Send confirmation.
+    // Send confirmation to the client.
     client.send(
       JSON.stringify({
         type: 'success',
-        message: ['SEEN'],
+        message: 'SEEN',
+        details: {
+          chatId: markSeenDto.chatId,
+        },
       }),
     );
+
+    // If reciepient is online, send the mark seen event.
+    if (reciever) {
+      reciever.socket.send(
+        JSON.stringify({
+          type: 'mark-seen',
+          details: {
+            chatId: markSeenDto.chatId,
+          },
+        }),
+      );
+    }
   }
 
   /**
@@ -533,7 +633,7 @@ export class MessageService {
     );
 
     // Update Message in Database.
-    const messageDto = await this.updateMessageModel({
+    const updatedMessage = await this.updateMessageModel({
       where: {
         id: updateMessageDto.messageId,
       },
@@ -541,6 +641,28 @@ export class MessageService {
         message: updateMessageDto.message,
       },
     });
+
+    const messageDto = await this.getMessageModel({
+      where: {
+        id: updatedMessage.id,
+      },
+      include: {
+        sentBy: true,
+        image: true,
+      },
+    });
+
+    // Send confirmation to the client.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_UPDATED',
+        details: {
+          chatId: chatModel.id,
+          message: messageDto,
+        },
+      }),
+    );
 
     // If reciever is connected, send the message.
     if (reciever) {
@@ -625,6 +747,18 @@ export class MessageService {
         id: deleteMessageDto.messageId,
       },
     });
+
+    // Send the confirmation to the client.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_DELETED',
+        details: {
+          chatId: chatModel.id,
+          messageId: deleteMessageDto.messageId,
+        },
+      }),
+    );
 
     // If reciever is connected, send the message.
     if (reciever) {
