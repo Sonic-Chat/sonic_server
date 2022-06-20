@@ -234,6 +234,28 @@ export class MessageService {
         },
       }),
     );
+
+    updatedChatModels.forEach((chat) => {
+      const friendAccount: Account = chat['participants'].filter(
+        (account: Account) => {
+          return account.credentialsId !== user['user']['id'];
+        },
+      )[0];
+
+      const socket = this.connectedUsers.find(
+        (user) => user.user.id === friendAccount.id,
+      );
+
+      if (socket)
+        socket.socket.send(
+          JSON.stringify({
+            type: 'mark-delivered',
+            details: {
+              chatId: chat.id,
+            },
+          }),
+        );
+    });
   }
 
   /**
@@ -245,8 +267,6 @@ export class MessageService {
     client: Socket,
     createMessageDto: CreateMessageDto,
   ): Promise<void> {
-    console.log(this.connectedUsers);
-
     // Validate the DTO object.
     const errors = createMessageDtoVerify(createMessageDto);
 
