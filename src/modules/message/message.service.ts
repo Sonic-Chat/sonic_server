@@ -632,6 +632,18 @@ export class MessageService {
       },
     });
 
+    // Send confirmation to the client.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_UPDATED',
+        details: {
+          chatId: chatModel.id,
+          message: messageDto,
+        },
+      }),
+    );
+
     // If reciever is connected, send the message.
     if (reciever) {
       reciever.socket.send(
@@ -644,18 +656,6 @@ export class MessageService {
         }),
       );
     }
-
-    // Send confirmation to the client.
-    client.send(
-      JSON.stringify({
-        type: 'success',
-        message: 'MESSAGE_UPDATED',
-        details: {
-          chatId: chatModel.id,
-          message: messageDto,
-        },
-      }),
-    );
   }
 
   /**
@@ -728,6 +728,18 @@ export class MessageService {
       },
     });
 
+    // Send the confirmation to the client.
+    client.send(
+      JSON.stringify({
+        type: 'success',
+        message: 'MESSAGE_DELETED',
+        details: {
+          chatId: chatModel.id,
+          messageId: deleteMessageDto.messageId,
+        },
+      }),
+    );
+
     // If reciever is connected, send the message.
     if (reciever) {
       reciever.socket.send(
@@ -740,17 +752,5 @@ export class MessageService {
         }),
       );
     }
-
-    // Send the confirmation to the client.
-    client.send(
-      JSON.stringify({
-        type: 'success',
-        message: 'MESSAGE_DELETED',
-        details: {
-          chatId: chatModel.id,
-          messageId: deleteMessageDto.messageId,
-        },
-      }),
-    );
   }
 }
