@@ -1,3 +1,4 @@
+import { MarkDeliveredDto } from './../../dto/chat/mark-delivered.dto';
 import {
   MarkSeenDto,
   verifyDto as markSeenDtoVerify,
@@ -11,9 +12,10 @@ import {
   verifyDto as updateMessageDtoVerify,
 } from './../../dto/chat/update-message.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   Account,
+  Chat,
   Credentials,
   Message,
   MessageType,
@@ -772,5 +774,78 @@ export class MessageService {
         }),
       );
     }
+  }
+
+  /**
+   * Service Implementation for marking chat delivered.
+   * @param user Logged In User.
+   * @param markDeliveredDto DTO Implementation for marking chat delivered.
+   * @returns Updated Chat Model.
+   */
+  public async markDelivered(
+    user: Credentials,
+    markDeliveredDto: MarkDeliveredDto,
+  ): Promise<Chat> {
+    // Check if chat exists.
+    const chat = await this.chatService.getChat({
+      where: {
+        id: markDeliveredDto.chatId,
+      },
+    });
+
+    // Throw an error if it does not exist.
+    if (!chat) {
+      throw new NotFoundException(ChatError.CHAT_UID_ILLEGAL);
+    }
+
+    // Update the delivery status of the chat.
+    const updatedChat = await this.chatService.updateChat({
+      where: {
+        id: chat.id,
+      },
+      data: {
+        delivered: {
+          connect: {
+            credentialsId: user.id,
+          },
+        },
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
+        participants: true,
+      },
+    });
+
+    // Filter out the friend ID.
+    const friendId = updatedChat['participants'].filter(
+      (participant: Account) => participant.credentialsId !== user.id,
+    )[0].id;
+
+    // Filter the connected user if present.
+    const friend = this.connectedUsers.find(
+      (user) => user.user.id === friendId,
+    );
+
+    if (friend)
+      // Send the delivery event to the friend.
+      friend.socket.send(
+        JSON.stringify({
+          type: 'mark-delivered',
+          details: {
+            chatId: updatedChat.id,
+          },
+        }),
+      );
+
+    // Return updated model.
+    return updatedChat;
   }
 }
