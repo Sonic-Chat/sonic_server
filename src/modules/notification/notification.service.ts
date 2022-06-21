@@ -92,11 +92,7 @@ export class NotificationService {
    * @param data Data to be sent.
    * @param body Body for the notification.
    */
-  public async sendNotification(
-    user: Account,
-    data: any,
-    body: { title: string; body: string },
-  ): Promise<void> {
+  public async sendNotification(user: Account, data: any): Promise<void> {
     // Check for existence of token.
     const checkToken = await this.getToken({
       where: {
@@ -110,7 +106,6 @@ export class NotificationService {
         checkToken.token,
         {
           data,
-          notification: body,
         },
         {
           contentAvailable: true,

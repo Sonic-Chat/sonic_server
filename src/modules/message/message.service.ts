@@ -461,20 +461,15 @@ export class MessageService {
       }
 
       // Send notification to recipient.
-      await this.notificationService.sendNotification(
-        reciever.user,
-        {
-          type: 'create-message',
-          details: {
-            chatId: createMessageDto.chatId,
-            message: messageDto,
-          },
-        },
-        {
+      await this.notificationService.sendNotification(reciever.user, {
+        type: 'create-message',
+        details: {
+          chatId: createMessageDto.chatId,
+          message: messageDto,
           title: `${reciever.user.fullName} sent a message`,
-          body,
+          body: body,
         },
-      );
+      });
     }
   }
 

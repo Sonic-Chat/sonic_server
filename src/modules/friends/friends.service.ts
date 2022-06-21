@@ -179,14 +179,13 @@ export class FriendsService {
     });
 
     // Send new request notification.
-    await this.notificationService.sendNotification(
-      friendAccount,
-      {},
-      {
+    await this.notificationService.sendNotification(friendAccount, {
+      type: 'new-request',
+      details: {
         title: 'New request',
         body: `${userAccount.fullName} sent you a friend request.`,
       },
-    );
+    });
 
     return newRequest;
   }
@@ -264,10 +263,9 @@ export class FriendsService {
       });
 
       // Send accepted request notification.
-      await this.notificationService.sendNotification(
-        loggedInUser,
-        {},
-        {
+      await this.notificationService.sendNotification(loggedInUser, {
+        type: 'request-accepted',
+        details: {
           title: 'Request Accepted',
           body: `${
             request['accounts'].filter(
@@ -275,7 +273,7 @@ export class FriendsService {
             )[0].fullName
           } sent you a friend request.`,
         },
-      );
+      });
     }
 
     return updatedRequest;
