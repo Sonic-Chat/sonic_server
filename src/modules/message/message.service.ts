@@ -290,19 +290,28 @@ export class MessageService {
         id: createMessageDto.chatId,
       },
       include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
         participants: true,
       },
     });
 
     // Filter out the reciever ID.
-    const recieverId = chatModel['participants'].filter(
+    const friend = chatModel['participants'].filter(
       (participant: Account) =>
         participant.id !== createMessageDto.user['account']['id'],
-    )[0].id;
+    )[0];
 
     // Filter the connected user if present.
     const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
+      (user) => user.user.id === friend.id,
     );
 
     let messageDto: Message;
@@ -439,38 +448,33 @@ export class MessageService {
           },
         }),
       );
-      let body = '';
-
-      // Body for the notification.
-      switch (createMessageDto.type) {
-        case MessageType.IMAGE: {
-          body = 'Image 📸';
-          break;
-        }
-        case MessageType.IMAGE_TEXT: {
-          body = `📸 ${createMessageDto.message!}`;
-          break;
-        }
-        case MessageType.TEXT: {
-          body = createMessageDto.message!;
-          break;
-        }
-        default: {
-          body = 'New Message';
-        }
-      }
-
-      // Send notification to recipient.
-      await this.notificationService.sendNotification(reciever.user, {
-        type: 'create-message',
-        details: {
-          chatId: createMessageDto.chatId,
-          message: messageDto,
-          title: `${reciever.user.fullName} sent a message`,
-          body: body,
-        },
-      });
     }
+    // Body for the notification.
+    let body = '';
+    switch (createMessageDto.type) {
+      case MessageType.IMAGE: {
+        body = 'Image 📸';
+        break;
+      }
+      case MessageType.IMAGE_TEXT: {
+        body = `📸 ${createMessageDto.message!}`;
+        break;
+      }
+      case MessageType.TEXT: {
+        body = createMessageDto.message!;
+        break;
+      }
+      default: {
+        body = 'New Message';
+      }
+    }
+    // Send notification to recipient.
+    await this.notificationService.sendNotification(friend, {
+      type: 'create-message',
+      chatId: createMessageDto.chatId,
+      title: `${friend.fullName} sent a message`,
+      body: body,
+    });
   }
 
   /**

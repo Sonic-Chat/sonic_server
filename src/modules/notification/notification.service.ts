@@ -90,7 +90,6 @@ export class NotificationService {
    * Service Implementation for saving FCM Token.
    * @param user Logged In User Details.
    * @param data Data to be sent.
-   * @param body Body for the notification.
    */
   public async sendNotification(user: Account, data: any): Promise<void> {
     // Check for existence of token.
