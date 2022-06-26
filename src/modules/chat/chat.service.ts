@@ -1,6 +1,21 @@
+import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
+import { CreateGroupChatDto } from './../../dto/chat/create-group-chat.dto';
 import { PrismaService } from './../prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
-import { Chat, Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  Chat,
+  ChatType,
+  Credentials,
+  FriendStatus,
+  Prisma,
+} from '@prisma/client';
+import { FriendsService } from '../friends/friends.service';
 
 /**
  * Service Implementation for Chat Messages Module.
@@ -56,5 +71,76 @@ export class ChatService {
    */
   public async updateChats(args: Prisma.ChatUpdateManyArgs): Promise<void> {
     await this.prismaService.chat.updateMany(args);
+  }
+
+  /**
+   * Service Implementation for creation of group chats.
+   * @param user Logged In User.
+   * @param createGroupChatDto DTO Implementation for creation of group chats.
+   * @returns Newly Created Group Chat.
+   */
+  public async createGroupChatService(
+    user: Credentials,
+    createGroupChatDto: CreateGroupChatDto,
+  ): Promise<Chat> {
+    // Check if any of the accounts is not friends with the logged in account.
+    for (let participantId of createGroupChatDto.participants) {
+      const checkRequest = await this.prismaService.friends.findFirst({
+        where: {
+          AND: [
+            {
+              accounts: {
+                some: {
+                  id: user['account']['id'],
+                },
+              },
+            },
+            {
+              accounts: {
+                some: {
+                  id: participantId,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      if (!checkRequest) {
+        throw new BadRequestException({
+          message: ChatError.NOT_FRIENDS,
+        });
+      } else if (checkRequest.status !== FriendStatus.ACCEPTED) {
+        throw new BadRequestException({
+          message: ChatError.NOT_FRIENDS,
+        });
+      }
+    }
+
+    // Create the new group chat object.
+    return await this.createChat({
+      data: {
+        participants: {
+          connect: createGroupChatDto.participants.map((id) => ({
+            id,
+          })),
+        },
+        type: ChatType.GROUP,
+        name: createGroupChatDto.name,
+        imageUrl: createGroupChatDto.imageUrl,
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
+        participants: true,
+      },
+    });
   }
 }
