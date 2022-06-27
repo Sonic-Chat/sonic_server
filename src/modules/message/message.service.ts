@@ -751,17 +751,6 @@ export class MessageService {
       },
     });
 
-    // Filter out the reciever ID.
-    const recieverId = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== deleteMessageDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Delete Message from Database.
     await this.deleteMessageModel({
       where: {
@@ -781,17 +770,26 @@ export class MessageService {
       }),
     );
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'delete-message',
-          details: {
-            chatId: chatModel.id,
-            messageId: deleteMessageDto.messageId,
-          },
-        }),
-      );
+    // Sending delete message event to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== deleteMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send delete message event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'delete-message',
+              details: {
+                chatId: chatModel.id,
+                messageId: deleteMessageDto.messageId,
+              },
+            }),
+          );
+      }
     }
   }
 
