@@ -644,17 +644,6 @@ export class MessageService {
       },
     });
 
-    // Filter out the reciever ID.
-    const recieverId = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== updateMessageDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Update Message in Database.
     const updatedMessage = await this.updateMessageModel({
       where: {
@@ -687,17 +676,26 @@ export class MessageService {
       }),
     );
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'update-message',
-          details: {
-            chatId: chatModel.id,
-            message: messageDto,
-          },
-        }),
-      );
+    // Sending update message event to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== updateMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send update message event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'update-message',
+              details: {
+                chatId: chatModel.id,
+                message: messageDto,
+              },
+            }),
+          );
+      }
     }
   }
 
