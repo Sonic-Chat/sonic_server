@@ -237,26 +237,27 @@ export class MessageService {
       }),
     );
 
+    // Sending delivery confirmation to all the participants in the chat.
     updatedChatModels.forEach((chat) => {
-      const friendAccount: Account = chat['participants'].filter(
-        (account: Account) => {
-          return account.credentialsId !== user['user']['id'];
-        },
-      )[0];
+      for (const account of chat['participants']) {
+        if (account.id !== user['user']['account']['id']) {
+          // Fetching socket details.
+          const socket = this.connectedUsers.find(
+            (user) => user.user.id === account.id,
+          );
 
-      const socket = this.connectedUsers.find(
-        (user) => user.user.id === friendAccount.id,
-      );
-
-      if (socket)
-        socket.socket.send(
-          JSON.stringify({
-            type: 'mark-delivered',
-            details: {
-              chatId: chat.id,
-            },
-          }),
-        );
+          // if participant is connected, send delivery event.
+          if (socket)
+            socket.socket.send(
+              JSON.stringify({
+                type: 'mark-delivered',
+                details: {
+                  chatId: chat.id,
+                },
+              }),
+            );
+        }
+      }
     });
   }
 
