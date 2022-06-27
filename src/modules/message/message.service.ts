@@ -524,19 +524,8 @@ export class MessageService {
       return;
     }
 
-    // Filter out the reciever ID.
-    const recieverId = checkChat['participants'].filter(
-      (participant: Account) =>
-        participant.id !== markSeenDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Mark user seen.
-    await this.chatService.updateChat({
+    const updatedChat = await this.chatService.updateChat({
       where: {
         id: markSeenDto.chatId,
       },
@@ -544,6 +533,18 @@ export class MessageService {
         seen: {
           connect: [{ id: markSeenDto.user['account']['id'] }],
         },
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
+        participants: true,
       },
     });
 
@@ -558,16 +559,26 @@ export class MessageService {
       }),
     );
 
-    // If reciepient is online, send the mark seen event.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'mark-seen',
-          details: {
-            chatId: markSeenDto.chatId,
-          },
-        }),
-      );
+    // Sending seen event to all the participants in the chat.
+    for (const account of updatedChat['participants']) {
+      if (account.id !== markSeenDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send seen event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'mark-seen',
+              details: {
+                chatId: markSeenDto.chatId,
+                byUser: markSeenDto.user['account']['id'],
+              },
+            }),
+          );
+      }
     }
   }
 
