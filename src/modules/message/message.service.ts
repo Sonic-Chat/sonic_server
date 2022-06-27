@@ -305,17 +305,6 @@ export class MessageService {
       },
     });
 
-    // Filter out the reciever ID.
-    const friend = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== createMessageDto.user['account']['id'],
-    )[0];
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === friend.id,
-    );
-
     let messageDto: Message;
 
     // Save message to database.
@@ -410,73 +399,93 @@ export class MessageService {
             },
           ],
         },
+        delivered: {
+          set: [
+            {
+              credentialsId: createMessageDto.user.id,
+            },
+          ],
+        },
       },
     });
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      // Set message as delivered.
-      await this.chatService.updateChat({
-        where: {
-          id: chatModel.id,
-        },
-        data: {
-          delivered: {
-            connect: [
-              {
-                id: reciever.user.id,
+    // Sending message to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== createMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send message.
+        if (socket) {
+          // Set message as delivered.
+          await this.chatService.updateChat({
+            where: {
+              id: chatModel.id,
+            },
+            data: {
+              delivered: {
+                connect: [
+                  {
+                    id: socket.user.id,
+                  },
+                ],
               },
-            ],
-          },
-        },
-      });
+            },
+          });
 
-      reciever.socket.send(
-        JSON.stringify({
+          // Sending new message event.
+          socket.socket.send(
+            JSON.stringify({
+              type: 'create-message',
+              details: {
+                chatId: createMessageDto.chatId,
+                message: messageDto,
+              },
+            }),
+          );
+
+          // Send the delivery event to the client.
+          client.send(
+            JSON.stringify({
+              type: 'mark-delivered',
+              details: {
+                chatId: createMessageDto.chatId,
+                byUser: socket.user.id,
+              },
+            }),
+          );
+        }
+
+        // Body for the notification.
+        let body = '';
+        switch (createMessageDto.type) {
+          case MessageType.IMAGE: {
+            body = 'Image 📸';
+            break;
+          }
+          case MessageType.IMAGE_TEXT: {
+            body = `📸 ${createMessageDto.message!}`;
+            break;
+          }
+          case MessageType.TEXT: {
+            body = createMessageDto.message!;
+            break;
+          }
+          default: {
+            body = 'New Message';
+          }
+        }
+        // Send notification to recipient.
+        await this.notificationService.sendNotification(socket.user, {
           type: 'create-message',
-          details: {
-            chatId: createMessageDto.chatId,
-            message: messageDto,
-          },
-        }),
-      );
-
-      // Send the delivery event to the client.
-      client.send(
-        JSON.stringify({
-          type: 'mark-delivered',
-          details: {
-            chatId: createMessageDto.chatId,
-          },
-        }),
-      );
-    }
-    // Body for the notification.
-    let body = '';
-    switch (createMessageDto.type) {
-      case MessageType.IMAGE: {
-        body = 'Image 📸';
-        break;
-      }
-      case MessageType.IMAGE_TEXT: {
-        body = `📸 ${createMessageDto.message!}`;
-        break;
-      }
-      case MessageType.TEXT: {
-        body = createMessageDto.message!;
-        break;
-      }
-      default: {
-        body = 'New Message';
+          chatId: createMessageDto.chatId,
+          title: `${socket.user.fullName} sent a message`,
+          body: body,
+        });
       }
     }
-    // Send notification to recipient.
-    await this.notificationService.sendNotification(friend, {
-      type: 'create-message',
-      chatId: createMessageDto.chatId,
-      title: `${friend.fullName} sent a message`,
-      body: body,
-    });
   }
 
   /**
