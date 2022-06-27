@@ -253,6 +253,7 @@ export class MessageService {
                 type: 'mark-delivered',
                 details: {
                   chatId: chat.id,
+                  byUser: user['user']['account']['id'],
                 },
               }),
             );
@@ -835,26 +836,27 @@ export class MessageService {
       },
     });
 
-    // Filter out the friend ID.
-    const friendId = updatedChat['participants'].filter(
-      (participant: Account) => participant.credentialsId !== user.id,
-    )[0].id;
+    // Sending delivery confirmation to all the participants in the chat.
+    for (const account of updatedChat['participants']) {
+      if (account.id !== user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
 
-    // Filter the connected user if present.
-    const friend = this.connectedUsers.find(
-      (user) => user.user.id === friendId,
-    );
-
-    if (friend)
-      // Send the delivery event to the friend.
-      friend.socket.send(
-        JSON.stringify({
-          type: 'mark-delivered',
-          details: {
-            chatId: updatedChat.id,
-          },
-        }),
-      );
+        // if participant is connected, send delivery event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'mark-delivered',
+              details: {
+                chatId: chat.id,
+                byUser: user['account']['id'],
+              },
+            }),
+          );
+      }
+    }
 
     // Return updated model.
     return updatedChat;
