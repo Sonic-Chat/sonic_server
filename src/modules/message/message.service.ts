@@ -478,10 +478,10 @@ export class MessageService {
           }
         }
         // Send notification to recipient.
-        await this.notificationService.sendNotification(socket.user, {
+        await this.notificationService.sendNotification(account, {
           type: 'create-message',
           chatId: createMessageDto.chatId,
-          title: `${socket.user.fullName} sent a message`,
+          title: `${account.fullName} sent a message`,
           body: body,
         });
       }

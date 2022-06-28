@@ -121,9 +121,14 @@ export class ChatService {
     return await this.createChat({
       data: {
         participants: {
-          connect: createGroupChatDto.participants.map((id) => ({
-            id,
-          })),
+          connect: [
+            ...createGroupChatDto.participants.map((id) => ({
+              id,
+            })),
+            {
+              credentialsId: user.id,
+            },
+          ],
         },
         type: ChatType.GROUP,
         name: createGroupChatDto.name,
