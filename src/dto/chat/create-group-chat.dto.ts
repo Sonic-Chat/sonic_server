@@ -1,4 +1,5 @@
 import {
+  ArrayMinSize,
   IsNotEmpty,
   IsOptional,
   IsUrl,
@@ -7,7 +8,7 @@ import {
 } from 'class-validator';
 
 export class CreateGroupChatDto {
-  @MinLength(1, { each: true })
+  @ArrayMinSize(1)
   @IsUUID(null, { each: true })
   public participants: string[];
 
