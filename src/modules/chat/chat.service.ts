@@ -17,6 +17,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { FriendsService } from '../friends/friends.service';
+import { DeleteGroupChatDto } from 'src/dto/chat/delete-group-chat.dto';
 
 /**
  * Service Implementation for Chat Messages Module.
@@ -72,6 +73,14 @@ export class ChatService {
    */
   public async updateChats(args: Prisma.ChatUpdateManyArgs): Promise<void> {
     await this.prismaService.chat.updateMany(args);
+  }
+
+  /**
+   * Service Implementation for deleting chat.
+   * @param args Chat Delete Arguments.
+   */
+  public async deleteChat(args: Prisma.ChatDeleteArgs): Promise<Chat> {
+    return await this.prismaService.chat.delete(args);
   }
 
   /**
@@ -237,6 +246,21 @@ export class ChatService {
         seen: true,
         delivered: true,
         participants: true,
+      },
+    });
+  }
+
+  /**
+   * Service Implementation for deleting group chat.
+   * @param deleteGroupChatDto DTO Implementation for deleting group chat.
+   * @returns Deleted Group Chat.
+   */
+  public async deleteGroupChatService(
+    deleteGroupChatDto: DeleteGroupChatDto,
+  ): Promise<Chat> {
+    return await this.deleteChat({
+      where: {
+        id: deleteGroupChatDto.chatId,
       },
     });
   }
