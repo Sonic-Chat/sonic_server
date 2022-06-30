@@ -1,3 +1,4 @@
+import { DeleteMessageDto } from './../../dto/chat/delete-message.dto';
 import { CreateGroupChatDto } from './../../dto/chat/create-group-chat.dto';
 import { ChatService } from './chat.service';
 import { Body, Controller, Post, Put, UseGuards } from '@nestjs/common';
@@ -5,6 +6,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { User } from 'src/decorators/user.decorator';
 import { Chat, Credentials } from '@prisma/client';
 import { UpdateGroupChatDto } from 'src/dto/chat/update-group-chat.dto';
+import { DeleteGroupChatDto } from 'src/dto/chat/delete-group-chat.dto';
 
 /**
  * Controller Implementation for Chat Module.
@@ -46,5 +48,17 @@ export class ChatController {
       user,
       updateGroupChatDto,
     );
+  }
+
+  /**
+   * Controller Implementation for deleting group chat.
+   * @param deleteGroupChatDto DTO Implementation for deleting group chat.
+   * @returns Deleted Chat.
+   */
+  @Put('group')
+  public async deleteGroupChatService(
+    @Body() deleteGroupChatDto: DeleteGroupChatDto,
+  ): Promise<Chat> {
+    return await this.chatService.deleteGroupChatService(deleteGroupChatDto);
   }
 }
