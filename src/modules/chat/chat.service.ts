@@ -1,3 +1,4 @@
+import { UpdateGroupChatDto } from './../../dto/chat/update-group-chat.dto';
 import { ChatError } from './../../enum/error-codes/chat/chat-error.enum';
 import { CreateGroupChatDto } from './../../dto/chat/create-group-chat.dto';
 import { PrismaService } from './../prisma/prisma.service';
@@ -133,6 +134,97 @@ export class ChatService {
         type: ChatType.GROUP,
         name: createGroupChatDto.name,
         imageUrl: createGroupChatDto.imageUrl,
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
+        participants: true,
+      },
+    });
+  }
+
+  /**
+   * Service Implementation for updating group chat.
+   * @param user Logged In User.
+   * @param updateGroupChatDto DTO Implementation for updating group chat.
+   * @returns Updated Group Chat.
+   */
+  public async updateGroupChatService(
+    user: Credentials,
+    updateGroupChatDto: UpdateGroupChatDto,
+  ): Promise<Chat> {
+    // Check if any of the accounts is not friends with the logged in account.
+    for (let participantId of updateGroupChatDto.participants) {
+      const checkRequest = await this.prismaService.friends.findFirst({
+        where: {
+          AND: [
+            {
+              accounts: {
+                some: {
+                  id: user['account']['id'],
+                },
+              },
+            },
+            {
+              accounts: {
+                some: {
+                  id: participantId,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      if (!checkRequest) {
+        throw new BadRequestException({
+          message: ChatError.NOT_FRIENDS,
+        });
+      } else if (checkRequest.status !== FriendStatus.ACCEPTED) {
+        throw new BadRequestException({
+          message: ChatError.NOT_FRIENDS,
+        });
+      }
+    }
+
+    // Check if the chat exists.
+    const checkChat = await this.getChat({
+      where: {
+        id: updateGroupChatDto.chatId,
+      },
+    });
+
+    if (!checkChat) {
+      throw new NotFoundException({
+        message: ChatError.CHAT_UID_ILLEGAL,
+      });
+    }
+
+    // Update the group chat object.
+    return await this.updateChat({
+      where: {
+        id: updateGroupChatDto.chatId,
+      },
+      data: {
+        participants: {
+          set: [
+            ...updateGroupChatDto.participants.map((id) => ({
+              id,
+            })),
+            {
+              credentialsId: user.id,
+            },
+          ],
+        },
+        name: updateGroupChatDto.name ?? checkChat.name,
+        imageUrl: updateGroupChatDto.imageUrl ?? checkChat.imageUrl,
       },
       include: {
         messages: {
