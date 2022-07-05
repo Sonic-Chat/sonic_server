@@ -209,7 +209,7 @@ export class MessageService {
       where: {
         participants: {
           some: {
-            credentialsId: user.id,
+            id: user['user']['account']['id'],
           },
         },
       },

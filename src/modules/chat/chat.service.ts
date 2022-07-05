@@ -7,6 +7,7 @@ import {
   forwardRef,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -24,6 +25,8 @@ import { DeleteGroupChatDto } from 'src/dto/chat/delete-group-chat.dto';
  */
 @Injectable()
 export class ChatService {
+  private readonly logger: Logger = new Logger(ChatService.name);
+
   constructor(private readonly prismaService: PrismaService) {
     this.prismaService.$on<any>('query', (event: Prisma.QueryEvent) => {
       console.log('Query: ' + event.query);
@@ -227,9 +230,6 @@ export class ChatService {
             ...updateGroupChatDto.participants.map((id) => ({
               id,
             })),
-            {
-              credentialsId: user.id,
-            },
           ],
         },
         name: updateGroupChatDto.name ?? checkChat.name,
