@@ -17,7 +17,6 @@ import {
 import { AccountService } from '../account/account.service';
 import { DeleteRequestDto } from 'src/dto/friends/delete-request.dto';
 import { NotificationService } from '../notification/notification.service';
-import { CredentialsService } from '../credentials/credentials.service';
 
 /**
  * Service Implementation for Friend Requests Module.

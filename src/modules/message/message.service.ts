@@ -209,7 +209,7 @@ export class MessageService {
       where: {
         participants: {
           some: {
-            credentialsId: user.id,
+            id: user['user']['account']['id'],
           },
         },
       },
@@ -237,26 +237,28 @@ export class MessageService {
       }),
     );
 
+    // Sending delivery confirmation to all the participants in the chat.
     updatedChatModels.forEach((chat) => {
-      const friendAccount: Account = chat['participants'].filter(
-        (account: Account) => {
-          return account.credentialsId !== user['user']['id'];
-        },
-      )[0];
+      for (const account of chat['participants']) {
+        if (account.id !== user['user']['account']['id']) {
+          // Fetching socket details.
+          const socket = this.connectedUsers.find(
+            (user) => user.user.id === account.id,
+          );
 
-      const socket = this.connectedUsers.find(
-        (user) => user.user.id === friendAccount.id,
-      );
-
-      if (socket)
-        socket.socket.send(
-          JSON.stringify({
-            type: 'mark-delivered',
-            details: {
-              chatId: chat.id,
-            },
-          }),
-        );
+          // if participant is connected, send delivery event.
+          if (socket)
+            socket.socket.send(
+              JSON.stringify({
+                type: 'mark-delivered',
+                details: {
+                  chatId: chat.id,
+                  byUser: user['user']['account']['id'],
+                },
+              }),
+            );
+        }
+      }
     });
   }
 
@@ -302,17 +304,6 @@ export class MessageService {
         participants: true,
       },
     });
-
-    // Filter out the reciever ID.
-    const friend = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== createMessageDto.user['account']['id'],
-    )[0];
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === friend.id,
-    );
 
     let messageDto: Message;
 
@@ -408,73 +399,93 @@ export class MessageService {
             },
           ],
         },
+        delivered: {
+          set: [
+            {
+              credentialsId: createMessageDto.user.id,
+            },
+          ],
+        },
       },
     });
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      // Set message as delivered.
-      await this.chatService.updateChat({
-        where: {
-          id: chatModel.id,
-        },
-        data: {
-          delivered: {
-            connect: [
-              {
-                id: reciever.user.id,
+    // Sending message to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== createMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send message.
+        if (socket) {
+          // Set message as delivered.
+          await this.chatService.updateChat({
+            where: {
+              id: chatModel.id,
+            },
+            data: {
+              delivered: {
+                connect: [
+                  {
+                    id: socket.user.id,
+                  },
+                ],
               },
-            ],
-          },
-        },
-      });
+            },
+          });
 
-      reciever.socket.send(
-        JSON.stringify({
+          // Sending new message event.
+          socket.socket.send(
+            JSON.stringify({
+              type: 'create-message',
+              details: {
+                chatId: createMessageDto.chatId,
+                message: messageDto,
+              },
+            }),
+          );
+
+          // Send the delivery event to the client.
+          client.send(
+            JSON.stringify({
+              type: 'mark-delivered',
+              details: {
+                chatId: createMessageDto.chatId,
+                byUser: socket.user.id,
+              },
+            }),
+          );
+        }
+
+        // Body for the notification.
+        let body = '';
+        switch (createMessageDto.type) {
+          case MessageType.IMAGE: {
+            body = 'Image 📸';
+            break;
+          }
+          case MessageType.IMAGE_TEXT: {
+            body = `📸 ${createMessageDto.message!}`;
+            break;
+          }
+          case MessageType.TEXT: {
+            body = createMessageDto.message!;
+            break;
+          }
+          default: {
+            body = 'New Message';
+          }
+        }
+        // Send notification to recipient.
+        await this.notificationService.sendNotification(account, {
           type: 'create-message',
-          details: {
-            chatId: createMessageDto.chatId,
-            message: messageDto,
-          },
-        }),
-      );
-
-      // Send the delivery event to the client.
-      client.send(
-        JSON.stringify({
-          type: 'mark-delivered',
-          details: {
-            chatId: createMessageDto.chatId,
-          },
-        }),
-      );
-    }
-    // Body for the notification.
-    let body = '';
-    switch (createMessageDto.type) {
-      case MessageType.IMAGE: {
-        body = 'Image 📸';
-        break;
-      }
-      case MessageType.IMAGE_TEXT: {
-        body = `📸 ${createMessageDto.message!}`;
-        break;
-      }
-      case MessageType.TEXT: {
-        body = createMessageDto.message!;
-        break;
-      }
-      default: {
-        body = 'New Message';
+          chatId: createMessageDto.chatId,
+          title: `${account.fullName} sent a message`,
+          body: body,
+        });
       }
     }
-    // Send notification to recipient.
-    await this.notificationService.sendNotification(friend, {
-      type: 'create-message',
-      chatId: createMessageDto.chatId,
-      title: `${friend.fullName} sent a message`,
-      body: body,
-    });
   }
 
   /**
@@ -523,19 +534,8 @@ export class MessageService {
       return;
     }
 
-    // Filter out the reciever ID.
-    const recieverId = checkChat['participants'].filter(
-      (participant: Account) =>
-        participant.id !== markSeenDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Mark user seen.
-    await this.chatService.updateChat({
+    const updatedChat = await this.chatService.updateChat({
       where: {
         id: markSeenDto.chatId,
       },
@@ -543,6 +543,18 @@ export class MessageService {
         seen: {
           connect: [{ id: markSeenDto.user['account']['id'] }],
         },
+      },
+      include: {
+        messages: {
+          include: {
+            chat: true,
+            image: true,
+            sentBy: true,
+          },
+        },
+        seen: true,
+        delivered: true,
+        participants: true,
       },
     });
 
@@ -557,16 +569,26 @@ export class MessageService {
       }),
     );
 
-    // If reciepient is online, send the mark seen event.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'mark-seen',
-          details: {
-            chatId: markSeenDto.chatId,
-          },
-        }),
-      );
+    // Sending seen event to all the participants in the chat.
+    for (const account of updatedChat['participants']) {
+      if (account.id !== markSeenDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send seen event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'mark-seen',
+              details: {
+                chatId: markSeenDto.chatId,
+                byUser: markSeenDto.user['account']['id'],
+              },
+            }),
+          );
+      }
     }
   }
 
@@ -622,17 +644,6 @@ export class MessageService {
       },
     });
 
-    // Filter out the reciever ID.
-    const recieverId = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== updateMessageDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Update Message in Database.
     const updatedMessage = await this.updateMessageModel({
       where: {
@@ -665,17 +676,26 @@ export class MessageService {
       }),
     );
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'update-message',
-          details: {
-            chatId: chatModel.id,
-            message: messageDto,
-          },
-        }),
-      );
+    // Sending update message event to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== updateMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send update message event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'update-message',
+              details: {
+                chatId: chatModel.id,
+                message: messageDto,
+              },
+            }),
+          );
+      }
     }
   }
 
@@ -731,17 +751,6 @@ export class MessageService {
       },
     });
 
-    // Filter out the reciever ID.
-    const recieverId = chatModel['participants'].filter(
-      (participant: Account) =>
-        participant.id !== deleteMessageDto.user['account']['id'],
-    )[0].id;
-
-    // Filter the connected user if present.
-    const reciever = this.connectedUsers.find(
-      (user) => user.user.id === recieverId,
-    );
-
     // Delete Message from Database.
     await this.deleteMessageModel({
       where: {
@@ -761,17 +770,26 @@ export class MessageService {
       }),
     );
 
-    // If reciever is connected, send the message.
-    if (reciever) {
-      reciever.socket.send(
-        JSON.stringify({
-          type: 'delete-message',
-          details: {
-            chatId: chatModel.id,
-            messageId: deleteMessageDto.messageId,
-          },
-        }),
-      );
+    // Sending delete message event to all the participants in the chat.
+    for (const account of chatModel['participants']) {
+      if (account.id !== deleteMessageDto.user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
+
+        // if participant is connected, send delete message event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'delete-message',
+              details: {
+                chatId: chatModel.id,
+                messageId: deleteMessageDto.messageId,
+              },
+            }),
+          );
+      }
     }
   }
 
@@ -823,26 +841,27 @@ export class MessageService {
       },
     });
 
-    // Filter out the friend ID.
-    const friendId = updatedChat['participants'].filter(
-      (participant: Account) => participant.credentialsId !== user.id,
-    )[0].id;
+    // Sending delivery confirmation to all the participants in the chat.
+    for (const account of updatedChat['participants']) {
+      if (account.id !== user['account']['id']) {
+        // Fetching socket details.
+        const socket = this.connectedUsers.find(
+          (user) => user.user.id === account.id,
+        );
 
-    // Filter the connected user if present.
-    const friend = this.connectedUsers.find(
-      (user) => user.user.id === friendId,
-    );
-
-    if (friend)
-      // Send the delivery event to the friend.
-      friend.socket.send(
-        JSON.stringify({
-          type: 'mark-delivered',
-          details: {
-            chatId: updatedChat.id,
-          },
-        }),
-      );
+        // if participant is connected, send delivery event.
+        if (socket)
+          socket.socket.send(
+            JSON.stringify({
+              type: 'mark-delivered',
+              details: {
+                chatId: chat.id,
+                byUser: user['account']['id'],
+              },
+            }),
+          );
+      }
+    }
 
     // Return updated model.
     return updatedChat;

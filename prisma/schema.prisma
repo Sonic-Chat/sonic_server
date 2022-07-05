@@ -24,6 +24,11 @@ enum MessageType {
   IMAGE_TEXT
 }
 
+enum ChatType {
+  SINGLE
+  GROUP
+}
+
 model Credentials {
   id           String   @id() @default(uuid())
   firebaseId   String   @unique() @map("firebase_id")
@@ -82,6 +87,9 @@ model Friends {
 
 model Chat {
   id        String   @id @default(uuid())
+  imageUrl  String?  @map("image_url") @db.LongText()
+  name      String   @default("single")
+  type      ChatType @default(SINGLE)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt() @map("updated_at")
 
