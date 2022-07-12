@@ -13,7 +13,9 @@ export class FirebaseService implements OnModuleInit {
 
   onModuleInit() {
     const firebaseJson = JSON.parse(
-      this.configService.get<string>('FIREBASE_JSON'),
+      process.env.NODE_ENV === 'production'
+        ? process.env.FIREBASE_JSON
+        : this.configService.get<string>('FIREBASE_JSON'),
     );
 
     if (!admin.apps.length) {
