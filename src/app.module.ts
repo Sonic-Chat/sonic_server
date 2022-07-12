@@ -12,35 +12,21 @@ import { ChatModule } from './modules/chat/chat.module';
 import { MessageModule } from './modules/message/message.module';
 
 @Module({
-  imports:
-    process.env.NODE_ENV === 'production'
-      ? [
-          FirebaseModule,
-          PrismaModule,
-          CredentialsModule,
-          AccountModule,
-          AuthModule,
-          SeedersModule,
-          NotificationModule,
-          FriendsModule,
-          ChatModule,
-          MessageModule,
-        ]
-      : [
-          ConfigModule.forRoot({
-            envFilePath: ['.env', 'firebase-json.env'],
-            isGlobal: true,
-          }),
-          FirebaseModule,
-          PrismaModule,
-          CredentialsModule,
-          AccountModule,
-          AuthModule,
-          SeedersModule,
-          NotificationModule,
-          FriendsModule,
-          ChatModule,
-          MessageModule,
-        ],
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: ['.env', 'firebase-json.env'],
+      isGlobal: true,
+    }),
+    FirebaseModule,
+    PrismaModule,
+    CredentialsModule,
+    AccountModule,
+    AuthModule,
+    SeedersModule,
+    NotificationModule,
+    FriendsModule,
+    ChatModule,
+    MessageModule,
+  ],
 })
 export class AppModule {}
